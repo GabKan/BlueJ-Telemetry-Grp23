@@ -29,7 +29,7 @@ public class CompileEventListener {
 
     public void onCompileFinished(
         boolean success,
-        List<String> errors,
+        List<Map<String, Object>> errors,
         long timestampMs,
         long sessionOffsetMs
     ) {

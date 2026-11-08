@@ -11,16 +11,20 @@
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <bluej.home>/opt/bluej</bluej.home>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>project-lib</id>
+            <url>${project.baseUri}lib-repo</url>
+        </repository>
+    </repositories>
     <dependencies>
         <dependency>
             <groupId>local.bluej</groupId>
             <artifactId>bluej-extension-api</artifactId>
-            <version>3.4</version>
-            <scope>system</scope>
-            <systemPath>${bluej.home}/bluej.jar</systemPath>
+            <version>6.0.1</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

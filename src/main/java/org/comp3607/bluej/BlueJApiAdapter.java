@@ -1,14 +1,13 @@
 package org.comp3607.bluej;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import org.comp3607.api.EventSource;
 import org.comp3607.collector.CompileEventListener;
-import org.comp3607.model.TelemetryEvent;
+import org.comp3607.collector.FileLoggingEventSink;
 
 import bluej.extensions2.BlueJ;
 import bluej.extensions2.event.CompileEvent;
@@ -17,20 +16,19 @@ import bluej.extensions2.event.CompileListener;
 public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
     private final BlueJ bluej;
     private final CompileEventListener telemetryListener;
-    private final EventSource eventSource;
+    private final FileLoggingEventSink eventSink;
     private final long sessionStartMs;
-    private final List<String> errors = new ArrayList<>();
-    private File telemetryLogFile;
+    private final List<Map<String, Object>> errors = new ArrayList<>();
 
     public BlueJApiAdapter(
         BlueJ bluej,
         CompileEventListener telemetryListener,
-        EventSource eventSource,
+        FileLoggingEventSink eventSink,
         long sessionStartMs
     ) {
         this.bluej = bluej;
         this.telemetryListener = telemetryListener;
-        this.eventSource = eventSource;
+        this.eventSink = eventSink;
         this.sessionStartMs = sessionStartMs;
     }
 
@@ -44,12 +42,13 @@ public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
         bluej.removeCompileListener(this);
     }
 
+    // BlueJ CompileListener callback.
     @Override
     public void compileStarted(CompileEvent event) {
         errors.clear();
         long timestampMs = System.currentTimeMillis();
         File[] files = event.getFiles();
-        telemetryLogFile = findTelemetryLogFile(files);
+        eventSink.setLogFile(findTelemetryLogFile(files));
 
         if (files == null || files.length == 0) {
             recordCompileStart("unknown", timestampMs);
@@ -61,20 +60,28 @@ public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
         }
     }
 
+    // BlueJ CompileListener callback.
     @Override
     public void compileError(CompileEvent event) {
-        errors.add("Line " + event.getErrorLineNumber() + ": " + event.getErrorMessage());
+        Map<String, Object> error = new HashMap<>();
+        error.put("errorCode", null);
+        error.put("message", event.getErrorMessage());
+        error.put("lineNumber", event.getErrorLineNumber());
+        errors.add(error);
     }
 
+    // BlueJ CompileListener callback.
     @Override
     public void compileWarning(CompileEvent event) {
     }
 
+    // BlueJ CompileListener callback.
     @Override
     public void compileSucceeded(CompileEvent event) {
         recordCompileFinish(true);
     }
 
+    // BlueJ CompileListener callback.
     @Override
     public void compileFailed(CompileEvent event) {
         recordCompileFinish(false);
@@ -82,7 +89,6 @@ public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
 
     private void recordCompileStart(String className, long timestampMs) {
         telemetryListener.onCompileStarted(className, timestampMs, timestampMs - sessionStartMs);
-        writeLatestEventToLog();
     }
 
     private void recordCompileFinish(boolean success) {
@@ -90,7 +96,6 @@ public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
         telemetryListener.onCompileFinished(
             success, errors, timestampMs, timestampMs - sessionStartMs
         );
-        writeLatestEventToLog();
     }
 
     private File findTelemetryLogFile(File[] files) {
@@ -107,28 +112,6 @@ public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
             directory = directory.getParentFile();
         }
         return null;
-    }
-
-    private void writeLatestEventToLog() {
-        if (telemetryLogFile == null) {
-            System.out.println("BlueJ Telemetry could not find the BlueJ project folder for its log.");
-            return;
-        }
-
-        List<TelemetryEvent> events = eventSource.snapshot();
-        if (events.isEmpty())
-            return;
-
-        TelemetryEvent event = events.get(events.size() - 1);
-        try (FileWriter output = new FileWriter(telemetryLogFile, true)) {
-            output.write("type=" + event.getType()
-                    + " timestampMs=" + event.getTimestampMs()
-                    + " sessionOffsetMs=" + event.getSessionOffsetMs()
-                    + " data=" + event.getData());
-            output.write(System.lineSeparator());
-        } catch (IOException exception) {
-            System.out.println("BlueJ Telemetry could not write its log: " + exception.getMessage());
-        }
     }
 
     private String getClassName(File file) {

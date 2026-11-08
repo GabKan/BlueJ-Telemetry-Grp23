@@ -49,8 +49,49 @@ If BlueJ is installed elsewhere, set `bluej.home` (located in the `pom.xml` file
 | `package.bluej` | A BlueJ project settings/marker file created by BlueJ in each project. Keep it in the project; the extension searches upward from compiled source files to find the project root. |
 | `bluej-telemetry.log` | A human-readable event log created by the extension in the BlueJ project root the first time a compile event is recorded. It is not created by the Maven build. |
 
-## Checking the log
+## Build and run
 
-Each line in `bluej-telemetry.log` contains the event type, timestamp, session offset, and event data. The project root is located by walking up from the compiled source file to the folder containing `package.bluej`, so the log location works across operating systems. This repository ignores the generated log; add the same ignore rule to another BlueJ project's `.gitignore` if you do not want that project's log committed.
+### Requirements
 
-The extension currently keeps events in memory and writes this simple text log for checking that collection works. Telemetry JSON export is not implemented yet.
+- JDK 17 or newer (JDK 21 recommended, the same as BlueJ 6)
+- Apache Maven 3.9 or newer
+- BlueJ 6.0.1 (only needed to run the extension, not to build it)
+- VS Code users: install the "Extension Pack for Java"
+
+Run `mvn -v` and check that Maven uses the JDK you expect.
+
+### Build
+
+No manual setup is needed. The BlueJ API jar is stored in the `lib-repo`
+folder of this repository, and `pom.xml` reads it from there.
+
+```bash
+git clone https://github.com/GabKan/BlueJ-Telemetry-Grp23.git
+cd BlueJ-Telemetry-Grp23
+mvn clean verify
+```
+
+The plugin jar is created at `target/bluej-telemetry-plugin-1.0.0.jar`.
+
+### Run the tests
+
+```bash
+mvn test
+```
+
+Coverage report: run `mvn clean test jacoco:report`, then open
+`target/site/jacoco/index.html`.
+
+### Install in BlueJ
+
+Copy `target/bluej-telemetry-plugin-1.0.0.jar` into the BlueJ extensions
+folder, then restart BlueJ.
+
+### Troubleshooting
+
+| Problem | Cause | Fix |
+|---|---|---|
+| VS Code shows "Could not read maven project" | The Java extension kept an old error | Run **Java: Clean Java Language Server Workspace**, restart, then right-click `pom.xml` and select **Update Project** |
+| Maven says the BlueJ jar "was not found" | A failed lookup is cached | Run `mvn -U clean verify` |
+| `Unsupported class file major version` from JaCoCo | The JDK is newer than the JaCoCo version supports | Use JDK 21, or update `jacoco-maven-plugin` |
+| Maven cannot find `lib-repo` files | The folder is missing from your clone | Run `git ls-files lib-repo` and pull the latest changes |
