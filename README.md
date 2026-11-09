@@ -1,6 +1,8 @@
 # BlueJ Telemetry Plugin
 
-This project builds a BlueJ extension that records compilation and execution events. The instructions below put Windows first; Linux instructions follow.
+This project builds a BlueJ extension that records compilation, execution,
+class, and inferred user-interaction events. The instructions below put
+Windows first and Linux instructions follow.
 
 ## Windows setup
 
@@ -33,11 +35,12 @@ before copying the JAR.
 Open a BlueJ project, compile a class, and invoke one of its methods to check that the extension is working. The file `bluej-telemetry.log` should appear in that BlueJ project's root folder.
 
 The extension records one `EXECUTION` event after a method invocation, including
-the class name and whether it exited because of a runtime exception. The
-extension also records class deletions and renames. BlueJ's public API does
-not provide reliable class-created or source-modified callbacks, so those
-actions are not currently recorded. Class state changes indicate compilation
-status and are not treated as source modifications.
+the class name and whether it exited because of a runtime exception. It also
+records class deletions, renames, and inferred creation on a class's first
+successful compile in the current session. Compile events are used as a proxy
+for editing activity; keyboard input and typing cadence are not captured.
+Periods of at least one minute between observed activity callbacks are
+recorded as estimated idle time.
 
 ## Linux setup
 

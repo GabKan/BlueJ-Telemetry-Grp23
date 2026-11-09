@@ -81,6 +81,25 @@ public class FileLoggingEventSink implements EventSink {
                 + " exception=" + data.get("exception");
         }
 
+        if (event.getType() == EventType.EDIT_ACTIVITY) {
+            Object names = data.get("classNames");
+            return "event=EDIT_ACTIVITY" + prefix
+                + " activitySource=" + data.get("activitySource")
+                + " classNames=" + quote(String.valueOf(names));
+        }
+
+        if (event.getType() == EventType.IDLE_PERIOD) {
+            return "event=IDLE_PERIOD" + prefix
+                + " durationMs=" + data.get("durationMs")
+                + " previousActivity=" + data.get("previousActivity")
+                + " resumedActivity=" + data.get("resumedActivity");
+        }
+
+        if (event.getType() == EventType.CLASS_CREATED) {
+            return "event=CLASS_CREATED" + prefix
+                + " className=" + quote(String.valueOf(data.get("className")));
+        }
+
         if (event.getType() == EventType.CLASS_DELETED) {
             return "event=CLASS_DELETED" + prefix
                 + " className=" + quote(String.valueOf(data.get("className")));

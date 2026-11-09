@@ -15,15 +15,19 @@ public class BlueJApiAdapter implements
     private final CompileEventListener compileListener;
     private final ExecutionEventListener executionListener;
     private final ClassEventListener classListener;
+    private final InteractionEventListener interactionListener;
     private final FileLoggingEventSink eventSink;
     private final long sessionStartMs;
     private final List<Map<String, Object>> errors = new ArrayList<>();
+    private final List<String> knownClassNames = new ArrayList<>();
+    private final List<String> compilingClassNames = new ArrayList<>();
 
     public BlueJApiAdapter(
         BlueJ bluej,
         CompileEventListener compileListener,
         ExecutionEventListener executionListener,
         ClassEventListener classListener,
+        InteractionEventListener interactionListener,
         FileLoggingEventSink eventSink,
         long sessionStartMs
     ) {
@@ -31,6 +35,7 @@ public class BlueJApiAdapter implements
         this.compileListener = compileListener;
         this.executionListener = executionListener;
         this.classListener = classListener;
+        this.interactionListener = interactionListener;
         this.eventSink = eventSink;
         this.sessionStartMs = sessionStartMs;
     }
@@ -57,6 +62,9 @@ public class BlueJApiAdapter implements
             ? EventType.EXCEPTION_EXIT.name()
             : null;
         long timestampMs = System.currentTimeMillis();
+        interactionListener.onActivity(
+            "EXECUTION", timestampMs, timestampMs - sessionStartMs
+        );
         executionListener.onExecution(
             event.getClassName(),
             exception,
@@ -69,8 +77,13 @@ public class BlueJApiAdapter implements
     public void classRemoved(ClassEvent event) {
         setClassLogFile(event);
         long timestampMs = System.currentTimeMillis();
+        String className = event.getBClass().getName();
+        knownClassNames.remove(className);
+        interactionListener.onActivity(
+            "CLASS_DELETED", timestampMs, timestampMs - sessionStartMs
+        );
         classListener.onClassDeleted(
-            event.getBClass().getName(),
+            className,
             timestampMs,
             timestampMs - sessionStartMs
         );
@@ -85,8 +98,16 @@ public class BlueJApiAdapter implements
     public void classNameChanged(ClassEvent event) {
         setClassLogFile(event);
         long timestampMs = System.currentTimeMillis();
+        String className = event.getBClass().getName();
+        knownClassNames.remove(event.getOldName());
+        if (!knownClassNames.contains(className)) {
+            knownClassNames.add(className);
+        }
+        interactionListener.onActivity(
+            "CLASS_RENAMED", timestampMs, timestampMs - sessionStartMs
+        );
         classListener.onClassRenamed(
-            event.getBClass().getName(),
+            className,
             event.getOldName(),
             timestampMs,
             timestampMs - sessionStartMs
@@ -133,18 +154,29 @@ public class BlueJApiAdapter implements
     @Override
     public void compileStarted(CompileEvent event) {
         errors.clear();
+        compilingClassNames.clear();
         long timestampMs = System.currentTimeMillis();
         File[] files = event.getFiles();
         eventSink.setLogFile(findTelemetryLogFile(files));
 
         if (files == null || files.length == 0) {
+            interactionListener.onCompileStarted(
+                new ArrayList<>(), timestampMs, timestampMs - sessionStartMs
+            );
             recordCompileStart("unknown", timestampMs);
             return;
         }
 
         for (File file : files) {
-            recordCompileStart(getClassName(file), timestampMs);
+            String className = getClassName(file);
+            if (!compilingClassNames.contains(className)) {
+                compilingClassNames.add(className);
+            }
+            recordCompileStart(className, timestampMs);
         }
+        interactionListener.onCompileStarted(
+            new ArrayList<>(compilingClassNames), timestampMs, timestampMs - sessionStartMs
+        );
     }
 
     // BlueJ CompileListener callback.
@@ -183,6 +215,18 @@ public class BlueJApiAdapter implements
         compileListener.onCompileFinished(
             success, errors, timestampMs, timestampMs - sessionStartMs
         );
+        interactionListener.onCompileFinished(timestampMs);
+        if (success) {
+            for (String className : compilingClassNames) {
+                if (!knownClassNames.contains(className)) {
+                    knownClassNames.add(className);
+                    classListener.onClassCreated(
+                        className, timestampMs, timestampMs - sessionStartMs
+                    );
+                }
+            }
+        }
+        compilingClassNames.clear();
     }
 
     private File findTelemetryLogFile(File[] files) {

@@ -7,7 +7,7 @@ import org.comp3607.collector.*;
 import org.comp3607.model.*;
 
 final class BlueJApiAdapterTestSupport {
-    static final long SESSION_START_MS = 1_000L;
+    static final long SESSION_START_MS = System.currentTimeMillis();
     private static final long SESSION_END_MS = 0L;
     static final int COMPILE_ERROR_LINE = 12;
     static final String COMPILE_ERROR_MESSAGE = "Missing return statement";
@@ -31,6 +31,7 @@ final class BlueJApiAdapterTestSupport {
             new CompileEventListener(sink, factory),
             new ExecutionEventListener(sink, factory),
             new ClassEventListener(sink, factory),
+            new InteractionEventListener(sink, factory, SESSION_START_MS),
             sink,
             SESSION_START_MS
         );

@@ -25,8 +25,22 @@ public class TelemetryEventFactory {
         return new TelemetryEvent(EventType.EXECUTION, timestampMs, sessionOffsetMs, data);
     }
 
+    public TelemetryEvent createInteractionEvent(
+        EventType type,
+        long timestampMs,
+        long sessionOffsetMs,
+        Map<String, Object> data
+    ) {
+        if (type != EventType.EDIT_ACTIVITY && type != EventType.IDLE_PERIOD) {
+            throw new IllegalArgumentException("Unsupported interaction event type: " + type);
+        }
+        return new TelemetryEvent(type, timestampMs, sessionOffsetMs, data);
+    }
+
     public TelemetryEvent createClassEvent(EventType type, long timestampMs, long sessionOffsetMs, Map<String, Object> data) {
-        if (type != EventType.CLASS_DELETED && type != EventType.CLASS_MODIFIED) {
+        if (type != EventType.CLASS_CREATED
+            && type != EventType.CLASS_DELETED
+            && type != EventType.CLASS_MODIFIED) {
             throw new IllegalArgumentException("Unsupported class event type: " + type);
         }
         return new TelemetryEvent(type, timestampMs, sessionOffsetMs, data);

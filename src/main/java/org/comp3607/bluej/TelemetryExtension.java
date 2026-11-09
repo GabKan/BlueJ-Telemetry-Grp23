@@ -22,18 +22,28 @@ public class TelemetryExtension extends Extension {
         eventSource = new BufferedEventSink(metadata);
         eventSink = new FileLoggingEventSink(eventSource);
 
+        TelemetryEventFactory eventFactory = new TelemetryEventFactory();
         CompileEventListener compileListener = new CompileEventListener(
-            eventSink, new TelemetryEventFactory()
+            eventSink, eventFactory
         );
         ExecutionEventListener executionListener = new ExecutionEventListener(
-            eventSink, new TelemetryEventFactory()
+            eventSink, eventFactory
         );
         ClassEventListener classListener = new ClassEventListener(
-            eventSink, new TelemetryEventFactory()
+            eventSink, eventFactory
+        );
+        InteractionEventListener interactionListener = new InteractionEventListener(
+            eventSink, eventFactory, sessionStartMs
         );
 
         adapter = new BlueJApiAdapter(
-            bluej, compileListener, executionListener, classListener, eventSink, sessionStartMs
+            bluej,
+            compileListener,
+            executionListener,
+            classListener,
+            interactionListener,
+            eventSink,
+            sessionStartMs
         );
         adapter.registerEventListeners();
 

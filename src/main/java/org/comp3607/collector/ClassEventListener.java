@@ -14,6 +14,16 @@ public class ClassEventListener {
         this.eventFactory = eventFactory;
     }
 
+    public void onClassCreated(String className, long timestampMs, long sessionOffsetMs) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("className", className);
+        eventSink.accept(
+            eventFactory.createClassEvent(
+                EventType.CLASS_CREATED, timestampMs, sessionOffsetMs, data
+            )
+        );
+    }
+
     public void onClassDeleted(String className, long timestampMs, long sessionOffsetMs) {
         Map<String, Object> data = new HashMap<>();
         data.put("className", className);

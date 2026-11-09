@@ -14,8 +14,6 @@ import org.junit.jupiter.api.io.TempDir;
 import bluej.extensions2.event.*;
 
 class BlueJApiAdapterCompileFailureTest {
-    private static final int COMPILE_FINISH_EVENT_INDEX = 1;
-
     @TempDir Path project;
 
     @Test
@@ -28,7 +26,11 @@ class BlueJApiAdapterCompileFailureTest {
         BlueJCompileTestSupport.recordCompileError(adapter, sourceFile);
         BlueJCompileTestSupport.finishFailedCompilation(adapter, sourceFile);
 
-        Map<String, Object> data = source.snapshot().get(COMPILE_FINISH_EVENT_INDEX).getData();
+        TelemetryEvent finishEvent = source.snapshot().stream()
+            .filter(event -> event.getType() == EventType.COMPILE_FINISH)
+            .findFirst()
+            .orElseThrow();
+        Map<String, Object> data = finishEvent.getData();
         List<?> errors = assertInstanceOf(List.class, data.get("errors"));
         Map<?, ?> diagnostic = assertInstanceOf(Map.class, errors.get(0));
         String log = Files.readString(project.resolve("bluej-telemetry.log"));
