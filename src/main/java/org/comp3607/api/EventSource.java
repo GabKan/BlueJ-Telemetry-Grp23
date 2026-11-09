@@ -2,8 +2,7 @@ package org.comp3607.api;
 
 import java.util.List;
 
-import org.comp3607.model.SessionMetadata;
-import org.comp3607.model.TelemetryEvent;
+import org.comp3607.model.*;
 
 public interface EventSource {
     List<TelemetryEvent> snapshot();

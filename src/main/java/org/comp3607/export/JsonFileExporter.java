@@ -3,8 +3,7 @@ package org.comp3607.export;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.comp3607.api.EventSource;
-import org.comp3607.api.Exporter;
+import org.comp3607.api.*;
 
 public class JsonFileExporter implements Exporter {
 

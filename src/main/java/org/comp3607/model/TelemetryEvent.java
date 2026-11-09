@@ -1,7 +1,6 @@
 package org.comp3607.model;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class TelemetryEvent {
     private final EventType type;

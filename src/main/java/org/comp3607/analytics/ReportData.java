@@ -1,7 +1,6 @@
 package org.comp3607.analytics;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ReportData {
 

@@ -1,12 +1,9 @@
 package org.comp3607.collector;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-import org.comp3607.api.EventSink;
-import org.comp3607.api.EventSource;
-import org.comp3607.model.SessionMetadata;
-import org.comp3607.model.TelemetryEvent;
+import org.comp3607.api.*;
+import org.comp3607.model.*;
 
 public class BufferedEventSink implements EventSink, EventSource {
     private final List<TelemetryEvent> events = new ArrayList<>();

@@ -1,13 +1,9 @@
 package org.comp3607.bluej;
 
-import org.comp3607.collector.BufferedEventSink;
-import org.comp3607.collector.CompileEventListener;
-import org.comp3607.collector.FileLoggingEventSink;
-import org.comp3607.collector.TelemetryEventFactory;
+import org.comp3607.collector.*;
 import org.comp3607.model.SessionMetadata;
 
-import bluej.extensions2.BlueJ;
-import bluej.extensions2.Extension;
+import bluej.extensions2.*;
 
 public class TelemetryExtension extends Extension {
     private long sessionStartMs;
@@ -29,8 +25,16 @@ public class TelemetryExtension extends Extension {
         CompileEventListener compileListener = new CompileEventListener(
             eventSink, new TelemetryEventFactory()
         );
+        ExecutionEventListener executionListener = new ExecutionEventListener(
+            eventSink, new TelemetryEventFactory()
+        );
+        ClassEventListener classListener = new ClassEventListener(
+            eventSink, new TelemetryEventFactory()
+        );
 
-        adapter = new BlueJApiAdapter(bluej, compileListener, eventSink, sessionStartMs);
+        adapter = new BlueJApiAdapter(
+            bluej, compileListener, executionListener, classListener, eventSink, sessionStartMs
+        );
         adapter.registerEventListeners();
 
         System.out.println("BlueJ Telemetry extension started");
@@ -75,6 +79,6 @@ public class TelemetryExtension extends Extension {
     // BlueJ Extension API metadata hook.
     @Override
     public String getDescription() {
-        return "Records basic compilation events for a BlueJ session.";
+        return "Records compilation and execution events for a BlueJ session.";
     }
 }

@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.comp3607.api.EventSink;
-import org.comp3607.model.EventType;
-import org.comp3607.model.TelemetryEvent;
+import org.comp3607.model.*;
 
 public class FileLoggingEventSink implements EventSink {
     private final EventSink eventSink;
@@ -75,6 +73,23 @@ public class FileLoggingEventSink implements EventSink {
                 }
             }
             return output.toString();
+        }
+
+        if (event.getType() == EventType.EXECUTION) {
+            return "event=EXECUTION" + prefix
+                + " className=" + quote(String.valueOf(data.get("className")))
+                + " exception=" + data.get("exception");
+        }
+
+        if (event.getType() == EventType.CLASS_DELETED) {
+            return "event=CLASS_DELETED" + prefix
+                + " className=" + quote(String.valueOf(data.get("className")));
+        }
+
+        if (event.getType() == EventType.CLASS_MODIFIED) {
+            return "event=CLASS_MODIFIED" + prefix
+                + " className=" + quote(String.valueOf(data.get("className")))
+                + " oldName=" + quote(String.valueOf(data.get("oldName")));
         }
 
         return "event=" + event.getType() + prefix + " data=" + data;

@@ -1,33 +1,36 @@
 package org.comp3607.bluej;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import org.comp3607.collector.CompileEventListener;
-import org.comp3607.collector.FileLoggingEventSink;
+import org.comp3607.collector.*;
 
-import bluej.extensions2.BlueJ;
-import bluej.extensions2.event.CompileEvent;
-import bluej.extensions2.event.CompileListener;
+import bluej.extensions2.*;
+import bluej.extensions2.event.*;
+import bluej.extensions2.event.InvocationFinishedEvent.EventType;
 
-public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
+public class BlueJApiAdapter implements
+    BlueJAdapter, CompileListener, InvocationFinishedListener, ClassListener {
     private final BlueJ bluej;
-    private final CompileEventListener telemetryListener;
+    private final CompileEventListener compileListener;
+    private final ExecutionEventListener executionListener;
+    private final ClassEventListener classListener;
     private final FileLoggingEventSink eventSink;
     private final long sessionStartMs;
     private final List<Map<String, Object>> errors = new ArrayList<>();
 
     public BlueJApiAdapter(
         BlueJ bluej,
-        CompileEventListener telemetryListener,
+        CompileEventListener compileListener,
+        ExecutionEventListener executionListener,
+        ClassEventListener classListener,
         FileLoggingEventSink eventSink,
         long sessionStartMs
     ) {
         this.bluej = bluej;
-        this.telemetryListener = telemetryListener;
+        this.compileListener = compileListener;
+        this.executionListener = executionListener;
+        this.classListener = classListener;
         this.eventSink = eventSink;
         this.sessionStartMs = sessionStartMs;
     }
@@ -35,11 +38,95 @@ public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
     @Override
     public void registerEventListeners() {
         bluej.addCompileListener(this);
+        bluej.addInvocationFinishedListener(this);
+        bluej.addClassListener(this);
     }
 
     @Override
     public void unregisterEventListeners() {
         bluej.removeCompileListener(this);
+        bluej.removeInvocationFinishedListener(this);
+        bluej.removeClassListener(this);
+    }
+
+    // BlueJ invocation callback, called after a method or object interaction finishes.
+    @Override
+    public void invocationFinished(InvocationFinishedEvent event) {
+        setExecutionLogFile(event);
+        String exception = event.getEventType() == EventType.EXCEPTION_EXIT
+            ? EventType.EXCEPTION_EXIT.name()
+            : null;
+        long timestampMs = System.currentTimeMillis();
+        executionListener.onExecution(
+            event.getClassName(),
+            exception,
+            timestampMs,
+            timestampMs - sessionStartMs
+        );
+    }
+
+    @Override
+    public void classRemoved(ClassEvent event) {
+        setClassLogFile(event);
+        long timestampMs = System.currentTimeMillis();
+        classListener.onClassDeleted(
+            event.getBClass().getName(),
+            timestampMs,
+            timestampMs - sessionStartMs
+        );
+    }
+
+    @Override
+    public void classStateChanged(ClassEvent event) {
+        // This callback reports compilation state, not source modifications.
+    }
+
+    @Override
+    public void classNameChanged(ClassEvent event) {
+        setClassLogFile(event);
+        long timestampMs = System.currentTimeMillis();
+        classListener.onClassRenamed(
+            event.getBClass().getName(),
+            event.getOldName(),
+            timestampMs,
+            timestampMs - sessionStartMs
+        );
+    }
+
+    private void setClassLogFile(ClassEvent event) {
+        if (bluej == null)
+            return;
+
+        try {
+            BPackage classPackage = event.getPackage();
+            if (classPackage != null) {
+                File projectDirectory = classPackage.getProject().getDir();
+                eventSink.setLogFile(new File(projectDirectory, "bluej-telemetry.log"));
+            }
+        } catch (ProjectNotOpenException exception) {
+            System.err.println(
+                "BlueJ Telemetry could not find the class event project: "
+                    + exception.getMessage()
+            );
+        }
+    }
+
+    private void setExecutionLogFile(InvocationFinishedEvent event) {
+        if (bluej == null)
+            return;
+
+        try {
+            BPackage invocationPackage = event.getPackage();
+            if (invocationPackage != null) {
+                File projectDirectory = invocationPackage.getProject().getDir();
+                eventSink.setLogFile(new File(projectDirectory, "bluej-telemetry.log"));
+            }
+        } catch (ProjectNotOpenException exception) {
+            System.err.println(
+                "BlueJ Telemetry could not find the execution project: "
+                    + exception.getMessage()
+            );
+        }
     }
 
     // BlueJ CompileListener callback.
@@ -88,12 +175,12 @@ public class BlueJApiAdapter implements BlueJAdapter, CompileListener {
     }
 
     private void recordCompileStart(String className, long timestampMs) {
-        telemetryListener.onCompileStarted(className, timestampMs, timestampMs - sessionStartMs);
+        compileListener.onCompileStarted(className, timestampMs, timestampMs - sessionStartMs);
     }
 
     private void recordCompileFinish(boolean success) {
         long timestampMs = System.currentTimeMillis();
-        telemetryListener.onCompileFinished(
+        compileListener.onCompileFinished(
             success, errors, timestampMs, timestampMs - sessionStartMs
         );
     }

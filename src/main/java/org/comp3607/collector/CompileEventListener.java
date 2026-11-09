@@ -1,9 +1,6 @@
 package org.comp3607.collector;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.comp3607.api.EventSink;
 import org.comp3607.model.EventType;

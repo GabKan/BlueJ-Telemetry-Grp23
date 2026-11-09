@@ -4,8 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.comp3607.analytics.ReportData;
-import org.comp3607.api.EventSource;
-import org.comp3607.api.Exporter;
+import org.comp3607.api.*;
 
 public class PdfReportGenerator implements Exporter {
 

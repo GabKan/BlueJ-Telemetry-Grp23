@@ -2,8 +2,7 @@ package org.comp3607.collector;
 
 import java.util.Map;
 
-import org.comp3607.model.EventType;
-import org.comp3607.model.TelemetryEvent;
+import org.comp3607.model.*;
 
 public class TelemetryEventFactory {
 
@@ -23,10 +22,13 @@ public class TelemetryEventFactory {
     }
 
     public TelemetryEvent createExecutionEvent(long timestampMs, long sessionOffsetMs, Map<String, Object> data) {
-        throw new UnsupportedOperationException("TODO Member A");
+        return new TelemetryEvent(EventType.EXECUTION, timestampMs, sessionOffsetMs, data);
     }
 
     public TelemetryEvent createClassEvent(EventType type, long timestampMs, long sessionOffsetMs, Map<String, Object> data) {
-        throw new UnsupportedOperationException("TODO Member A");
+        if (type != EventType.CLASS_DELETED && type != EventType.CLASS_MODIFIED) {
+            throw new IllegalArgumentException("Unsupported class event type: " + type);
+        }
+        return new TelemetryEvent(type, timestampMs, sessionOffsetMs, data);
     }
 }
