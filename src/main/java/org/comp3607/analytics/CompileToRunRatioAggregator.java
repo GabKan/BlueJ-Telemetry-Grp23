@@ -1,6 +1,7 @@
 package org.comp3607.analytics;
 
-import java.util.*;
+import java.util.List;
+
 import org.comp3607.model.EventType;
 import org.comp3607.model.TelemetryEvent;
 

@@ -4,7 +4,6 @@ import java.util.*;
 import org.comp3607.model.EventType;
 import org.comp3607.model.TelemetryEvent;
 
-
 // Counts compilation errors by error type
 
 public class ErrorFrequencyAggregator {
