@@ -1,12 +1,10 @@
 package org.comp3607.export;
 
-import java.nio.file.Path;
-
-import org.comp3607.model.SessionMetadata;
+import org.comp3607.api.SessionMetadata;
 
 public class ExportFileNamer {
 
-    public Path createPath(Path directory, SessionMetadata metadata) {
-        throw new UnsupportedOperationException("TODO Member B");
+    public String nameFor(SessionMetadata metadata) {
+        return "telemetry_" + metadata.getSessionId() + ".json";
     }
 }
