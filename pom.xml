@@ -37,6 +37,11 @@
             <artifactId>openpdf</artifactId>
             <version>1.3.30</version>
         </dependency>
+        <dependency>
+            <groupId>org.jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.5.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -65,8 +70,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <!-- TODO: Add the team-selected JSON library dependency. -->
-    <!-- TODO: Add the team-selected PDF library dependency. -->
-    <!-- TODO: Add the team-selected chart library dependency. -->
 </project>

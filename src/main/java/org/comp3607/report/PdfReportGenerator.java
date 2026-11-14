@@ -40,6 +40,7 @@ public class PdfReportGenerator implements Exporter {
     private static final int TIMELINE_SIZE = 10;
     private static final int TABLE_COLUMNS = 2;
     private static final double PERCENT = 100.0;
+    private static final float TABLE_GAP = 6;
 
     public static String reportFileName(String sessionId) {
         return "report_" + sessionId + ".pdf";
@@ -103,6 +104,7 @@ public class PdfReportGenerator implements Exporter {
 
     private void addTextTable(Document document, String tableText) throws DocumentException {
         PdfPTable table = new PdfPTable(TABLE_COLUMNS);
+        table.setSpacingBefore(TABLE_GAP);
         String[] lines = tableText.split("\n");
 
         for (String line : lines) {
@@ -138,6 +140,7 @@ public class PdfReportGenerator implements Exporter {
             image.scaleToFit(CHART_WIDTH, CHART_HEIGHT);
             image.setAlignment(Element.ALIGN_CENTER);
             document.add(image);
+            document.add(new Paragraph(" "));
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Could not draw the " + name + " chart", e);
             document.add(new Paragraph("The " + name + " chart could not be drawn."));
