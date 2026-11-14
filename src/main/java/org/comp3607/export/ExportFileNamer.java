@@ -1,6 +1,6 @@
 package org.comp3607.export;
 
-import org.comp3607.api.SessionMetadata;
+import org.comp3607.model.SessionMetadata;
 
 public class ExportFileNamer {
 

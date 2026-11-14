@@ -21,10 +21,13 @@ public class JsonFileExporter implements Exporter {
         this.outputDirectory = outputDirectory;
     }
 
-    @Override
     public void export(EventSource source) throws IOException {
+        export(source, outputDirectory.resolve(fileNamer.nameFor(source.metadata())));
+    }
+
+    @Override
+    public void export(EventSource source, Path target) throws IOException {
         String json = serialiser.serialise(source);
-        Path file = outputDirectory.resolve(fileNamer.nameFor(source.getSessionMetadata()));
-        Files.writeString(file, json, StandardCharsets.UTF_8);
+        Files.writeString(target, json, StandardCharsets.UTF_8);
     }
 }
