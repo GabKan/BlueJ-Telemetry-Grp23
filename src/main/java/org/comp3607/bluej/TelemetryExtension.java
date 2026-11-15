@@ -6,8 +6,11 @@ import java.nio.file.Path;
 import org.comp3607.collector.*;
 import org.comp3607.export.ExportFileNamer;
 import org.comp3607.export.JsonFileExporter;
+import org.comp3607.json.TelemetryJsonReader;
 import org.comp3607.json.TelemetryJsonSerialiser;
 import org.comp3607.model.SessionMetadata;
+import org.comp3607.report.JsonReportGenerator;
+import org.comp3607.report.PdfReportGenerator;
 
 import bluej.extensions2.*;
 
@@ -68,25 +71,60 @@ public class TelemetryExtension extends Extension {
             );
 
             if (adapter != null && adapter.getProjectDirectory() != null) {
-                Path telemetryDirectory = adapter.getProjectDirectory().toPath()
-                    .resolve(".telemetry");
-                JsonFileExporter exporter = new JsonFileExporter(
-                    new TelemetryJsonSerialiser(),
-                    new ExportFileNamer(),
-                    telemetryDirectory
-                );
+                Path projectDirectory = adapter.getProjectDirectory().toPath();
+                Path telemetryFile = projectDirectory.resolve(".telemetry")
+                    .resolve(new ExportFileNamer().nameFor(eventSource.metadata()));
                 try {
-                    exporter.export(eventSource);
+                    JsonFileExporter jsonExporter = new JsonFileExporter(
+                        new TelemetryJsonSerialiser(),
+                        new ExportFileNamer(),
+                        projectDirectory.resolve(".telemetry")
+                    );
+                    jsonExporter.export(eventSource, telemetryFile);
                 } catch (IOException exception) {
                     System.err.println(
-                        "BlueJ Telemetry could not save the session JSON: "
+                        "BlueJ Telemetry could not save session telemetry: "
+                            + exception.getMessage()
+                    );
+                    return;
+                }
+
+                BufferedEventSink savedSource;
+                try {
+                    savedSource = new TelemetryJsonReader().read(telemetryFile);
+                } catch (IOException exception) {
+                    System.err.println(
+                        "BlueJ Telemetry could not read session telemetry for reports: "
+                            + exception.getMessage()
+                    );
+                    return;
+                }
+
+                Path jsonReport = projectDirectory.resolve("json_reports")
+                    .resolve(JsonReportGenerator.reportFileName(sessionId));
+                try {
+                    new JsonReportGenerator().export(savedSource, jsonReport);
+                } catch (IOException exception) {
+                    System.err.println(
+                        "BlueJ Telemetry could not create the JSON analysis report: "
+                            + exception.getMessage()
+                    );
+                }
+
+                Path pdfReport = projectDirectory.resolve("pdf_reports")
+                    .resolve(PdfReportGenerator.reportFileName(sessionId));
+                try {
+                    new PdfReportGenerator().export(savedSource, pdfReport);
+                } catch (IOException exception) {
+                    System.err.println(
+                        "BlueJ Telemetry could not create the PDF report: "
                             + exception.getMessage()
                     );
                 }
             } else {
                 System.err.println(
-                    "BlueJ Telemetry could not save the session JSON because no project "
-                        + "directory was observed."
+                    "BlueJ Telemetry could not create reports because no project directory "
+                        + "was observed."
                 );
             }
         }

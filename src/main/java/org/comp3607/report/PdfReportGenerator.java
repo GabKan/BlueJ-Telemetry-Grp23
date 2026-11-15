@@ -57,6 +57,10 @@ public class PdfReportGenerator implements Exporter {
     // Writes PDF for the given report data.
 
     public void generate(ReportData reportData, Path target) throws IOException {
+        Path parent = target.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
         Document document = new Document(PageSize.A4);
         try {
             PdfWriter.getInstance(document, new FileOutputStream(target.toFile()));

@@ -29,8 +29,18 @@ public class ErrorFrequencyAggregator {
 
         List errorList = (List) errorsValue;
         for (Object error : errorList) {
-            addOne(counts, String.valueOf(error));
+            addOne(counts, errorType(error));
         }
+    }
+
+    private String errorType(Object error) {
+        if (error instanceof Map<?, ?>) {
+            Object message = ((Map<?, ?>) error).get("message");
+            if (message != null) {
+                return String.valueOf(message);
+            }
+        }
+        return String.valueOf(error);
     }
 
     private void addOne(Map<String, Long> counts, String type) {

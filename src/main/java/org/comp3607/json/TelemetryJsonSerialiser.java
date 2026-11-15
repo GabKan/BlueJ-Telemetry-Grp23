@@ -13,6 +13,10 @@ public class TelemetryJsonSerialiser {
         json.putAll(new SessionJsonBuilder().build(source));
         json.putAll(new EventsJsonBuilder().build(source));
 
+        return serialise(json);
+    }
+
+    public String serialise(Map<String, Object> json) {
         StringBuilder output = new StringBuilder();
         appendValue(output, json, 0);
         return output.toString();
