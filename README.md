@@ -32,7 +32,10 @@ Restart BlueJ to load the updated JAR. BlueJ 5 and later use
 different extension folder. If the folder does not exist, create it once
 before copying the JAR.
 
-Open a BlueJ project, compile a class, and invoke one of its methods to check that the extension is working. The file `bluej-telemetry.log` should appear in that BlueJ project's root folder.
+Open a BlueJ project, compile a class, and invoke one of its methods. When the
+BlueJ session ends, the extension saves one JSON file named
+`telemetry_<session-id>.json` in the hidden `.telemetry` subdirectory of the
+last project directory where it observed telemetry.
 
 The extension records one `EXECUTION` event after a method invocation, including
 the class name and whether it exited because of a runtime exception. It also
@@ -69,7 +72,8 @@ older BlueJ versions may use `~/.bluej/extensions/`.
 | `target/bluej-telemetry-plugin-1.0.0.jar` | The built extension JAR. Maven generates it in the repository's `target` folder when `mvn package` succeeds. Copy this JAR to BlueJ's user extensions folder; do not copy the whole `target` folder. |
 | `extensions2/` | BlueJ 5 and later's per-user extension folder. On Windows this is `%USERPROFILE%\bluej\extensions2\`; on Linux it is `~/.bluej/extensions2/`. Create it if it does not exist. The extension JAR goes here. Check your BlueJ version's documentation if its extension folder differs. |
 | `package.bluej` | A BlueJ project settings/marker file created by BlueJ in each project. Keep it in the project; the extension searches upward from compiled source files to find the project root. |
-| `bluej-telemetry.log` | A human-readable event log created by the extension in the BlueJ project root the first time a telemetry event is recorded. It is not created by the Maven build. |
+| `.telemetry/` | Hidden directory in a BlueJ project that stores session JSON files. The directory is created when the extension saves a session. |
+| `telemetry_<session-id>.json` | Session metadata and all collected events, written inside `.telemetry/` when the BlueJ session ends. It is not created by the Maven build. |
 
 ## Build and test
 
@@ -103,5 +107,5 @@ The plugin jar is created at `target/bluej-telemetry-plugin-1.0.0.jar`.
 |---|---|---|
 | VS Code shows "Could not read maven project" | The Java extension kept an old error | Run **Java: Clean Java Language Server Workspace**, restart, then right-click `pom.xml` and select **Update Project** |
 | Tests fail with `UnsupportedClassVersionError` for a `bluej.extensions2` class | The test runner is using Java 17, but BlueJ 6 API classes require Java 21 | Select Java 21 or newer for the Maven and VS Code test runtimes. BlueJ's bundled JDK is under its installation folder in `jdk`. |
-| Execution entries do not appear in the project log | BlueJ may still be running an older installed plugin JAR | Copy the newly built JAR from `target` into the user `extensions2` folder, fully close BlueJ, and restart it before testing. |
+| No session JSON file appears | BlueJ may still be running an older plugin JAR, or no project event was observed | Install the new JAR, restart BlueJ, and compile or run a class before closing the session. |
 | Maven cannot resolve the BlueJ API dependency | The `lib-repo` folder is missing from your clone | Pull the latest repository changes so `lib-repo` is restored. |

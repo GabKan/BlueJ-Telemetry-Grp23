@@ -28,6 +28,10 @@ public class JsonFileExporter implements Exporter {
     @Override
     public void export(EventSource source, Path target) throws IOException {
         String json = serialiser.serialise(source);
+        Path parent = target.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
         Files.writeString(target, json, StandardCharsets.UTF_8);
     }
 }

@@ -3,7 +3,6 @@ package org.comp3607.bluej;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -21,9 +20,7 @@ class BlueJApiAdapterClassCreationTest {
     void recordsCreationOnFirstSuccessfulCompileOnly() throws Exception {
         Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
         BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
-        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(
-            BlueJApiAdapterTestSupport.eventSink(source, project)
-        );
+        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
         BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
         BlueJCompileTestSupport.finishFailedCompilation(adapter, sourceFile);
         BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
@@ -35,7 +32,7 @@ class BlueJApiAdapterClassCreationTest {
             .filter(event -> event.getType() == EventType.CLASS_CREATED)
             .toList();
         assertEquals(EXPECTED_CREATION_COUNT, creations.size());
-        String log = Files.readString(project.resolve("bluej-telemetry.log"));
-        assertTrue(log.contains("event=CLASS_CREATED"));
+        assertTrue(source.snapshot().stream()
+            .anyMatch(event -> event.getType() == EventType.CLASS_CREATED));
     }
 }

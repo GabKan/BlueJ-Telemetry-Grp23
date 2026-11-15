@@ -2,10 +2,10 @@ package org.comp3607.bluej;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.*;
 import java.nio.file.*;
 
 import org.comp3607.collector.*;
+import org.comp3607.model.EventType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -15,18 +15,18 @@ class BlueJApiAdapterCompileSuccessTest {
     @TempDir Path project;
 
     @Test
-    void recordsSuccessfulCompilationToTheLog() throws Exception {
+    void recordsSuccessfulCompilationAndFindsTheProjectDirectory() throws Exception {
         Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
         BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
-        FileLoggingEventSink sink = BlueJApiAdapterTestSupport.eventSink(source, project);
-        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(sink);
+        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
         BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
         BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, sourceFile);
 
-        String log = Files.readString(project.resolve("bluej-telemetry.log"));
-        assertTrue(log.contains("event=COMPILE_START"));
-        assertTrue(log.contains("className=\"Example\""));
-        assertTrue(log.contains("status=SUCCEEDED"));
-        assertTrue(log.contains("success=true"));
+        assertEquals(project.toFile().getAbsoluteFile(), adapter.getProjectDirectory());
+        assertTrue(source.snapshot().stream()
+            .anyMatch(event -> event.getType() == EventType.COMPILE_START));
+        assertTrue(source.snapshot().stream()
+            .anyMatch(event -> event.getType() == EventType.COMPILE_FINISH
+                && Boolean.TRUE.equals(event.getData().get("success"))));
     }
 }

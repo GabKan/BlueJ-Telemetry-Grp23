@@ -1,6 +1,12 @@
 package org.comp3607.bluej;
 
+import java.io.IOException;
+import java.nio.file.Path;
+
 import org.comp3607.collector.*;
+import org.comp3607.export.ExportFileNamer;
+import org.comp3607.export.JsonFileExporter;
+import org.comp3607.json.TelemetryJsonSerialiser;
 import org.comp3607.model.SessionMetadata;
 
 import bluej.extensions2.*;
@@ -9,7 +15,6 @@ public class TelemetryExtension extends Extension {
     private long sessionStartMs;
     private String sessionId;
     private BufferedEventSink eventSource;
-    private FileLoggingEventSink eventSink;
     private BlueJApiAdapter adapter;
 
     // BlueJ Extension API lifecycle hook.
@@ -20,20 +25,19 @@ public class TelemetryExtension extends Extension {
 
         SessionMetadata metadata = new SessionMetadata(sessionId, "unknown", sessionStartMs, 0L);
         eventSource = new BufferedEventSink(metadata);
-        eventSink = new FileLoggingEventSink(eventSource);
 
         TelemetryEventFactory eventFactory = new TelemetryEventFactory();
         CompileEventListener compileListener = new CompileEventListener(
-            eventSink, eventFactory
+            eventSource, eventFactory
         );
         ExecutionEventListener executionListener = new ExecutionEventListener(
-            eventSink, eventFactory
+            eventSource, eventFactory
         );
         ClassEventListener classListener = new ClassEventListener(
-            eventSink, eventFactory
+            eventSource, eventFactory
         );
         InteractionEventListener interactionListener = new InteractionEventListener(
-            eventSink, eventFactory, sessionStartMs
+            eventSource, eventFactory, sessionStartMs
         );
 
         adapter = new BlueJApiAdapter(
@@ -42,7 +46,6 @@ public class TelemetryExtension extends Extension {
             executionListener,
             classListener,
             interactionListener,
-            eventSink,
             sessionStartMs
         );
         adapter.registerEventListeners();
@@ -63,6 +66,29 @@ public class TelemetryExtension extends Extension {
                     sessionId, "unknown", sessionStartMs, sessionEndMs
                 )
             );
+
+            if (adapter != null && adapter.getProjectDirectory() != null) {
+                Path telemetryDirectory = adapter.getProjectDirectory().toPath()
+                    .resolve(".telemetry");
+                JsonFileExporter exporter = new JsonFileExporter(
+                    new TelemetryJsonSerialiser(),
+                    new ExportFileNamer(),
+                    telemetryDirectory
+                );
+                try {
+                    exporter.export(eventSource);
+                } catch (IOException exception) {
+                    System.err.println(
+                        "BlueJ Telemetry could not save the session JSON: "
+                            + exception.getMessage()
+                    );
+                }
+            } else {
+                System.err.println(
+                    "BlueJ Telemetry could not save the session JSON because no project "
+                        + "directory was observed."
+                );
+            }
         }
 
         System.out.println("BlueJ Telemetry extension stopped");

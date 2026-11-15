@@ -16,11 +16,11 @@ public class BlueJApiAdapter implements
     private final ExecutionEventListener executionListener;
     private final ClassEventListener classListener;
     private final InteractionEventListener interactionListener;
-    private final FileLoggingEventSink eventSink;
     private final long sessionStartMs;
     private final List<Map<String, Object>> errors = new ArrayList<>();
     private final List<String> knownClassNames = new ArrayList<>();
     private final List<String> compilingClassNames = new ArrayList<>();
+    private File projectDirectory;
 
     public BlueJApiAdapter(
         BlueJ bluej,
@@ -28,7 +28,6 @@ public class BlueJApiAdapter implements
         ExecutionEventListener executionListener,
         ClassEventListener classListener,
         InteractionEventListener interactionListener,
-        FileLoggingEventSink eventSink,
         long sessionStartMs
     ) {
         this.bluej = bluej;
@@ -36,7 +35,6 @@ public class BlueJApiAdapter implements
         this.executionListener = executionListener;
         this.classListener = classListener;
         this.interactionListener = interactionListener;
-        this.eventSink = eventSink;
         this.sessionStartMs = sessionStartMs;
     }
 
@@ -57,7 +55,7 @@ public class BlueJApiAdapter implements
     // BlueJ invocation callback, called after a method or object interaction finishes.
     @Override
     public void invocationFinished(InvocationFinishedEvent event) {
-        setExecutionLogFile(event);
+        rememberExecutionProjectDirectory(event);
         String exception = event.getEventType() == EventType.EXCEPTION_EXIT
             ? EventType.EXCEPTION_EXIT.name()
             : null;
@@ -75,7 +73,7 @@ public class BlueJApiAdapter implements
 
     @Override
     public void classRemoved(ClassEvent event) {
-        setClassLogFile(event);
+        rememberClassProjectDirectory(event);
         long timestampMs = System.currentTimeMillis();
         String className = event.getBClass().getName();
         knownClassNames.remove(className);
@@ -96,7 +94,7 @@ public class BlueJApiAdapter implements
 
     @Override
     public void classNameChanged(ClassEvent event) {
-        setClassLogFile(event);
+        rememberClassProjectDirectory(event);
         long timestampMs = System.currentTimeMillis();
         String className = event.getBClass().getName();
         knownClassNames.remove(event.getOldName());
@@ -114,37 +112,35 @@ public class BlueJApiAdapter implements
         );
     }
 
-    private void setClassLogFile(ClassEvent event) {
+    private void rememberClassProjectDirectory(ClassEvent event) {
         if (bluej == null)
             return;
 
         try {
             BPackage classPackage = event.getPackage();
             if (classPackage != null) {
-                File projectDirectory = classPackage.getProject().getDir();
-                eventSink.setLogFile(new File(projectDirectory, "bluej-telemetry.log"));
+                projectDirectory = classPackage.getProject().getDir();
             }
         } catch (ProjectNotOpenException exception) {
             System.err.println(
-                "BlueJ Telemetry could not find the class event project: "
+                "BlueJ Telemetry could not find the class event project directory: "
                     + exception.getMessage()
             );
         }
     }
 
-    private void setExecutionLogFile(InvocationFinishedEvent event) {
+    private void rememberExecutionProjectDirectory(InvocationFinishedEvent event) {
         if (bluej == null)
             return;
 
         try {
             BPackage invocationPackage = event.getPackage();
             if (invocationPackage != null) {
-                File projectDirectory = invocationPackage.getProject().getDir();
-                eventSink.setLogFile(new File(projectDirectory, "bluej-telemetry.log"));
+                projectDirectory = invocationPackage.getProject().getDir();
             }
         } catch (ProjectNotOpenException exception) {
             System.err.println(
-                "BlueJ Telemetry could not find the execution project: "
+                "BlueJ Telemetry could not find the execution project directory: "
                     + exception.getMessage()
             );
         }
@@ -157,7 +153,7 @@ public class BlueJApiAdapter implements
         compilingClassNames.clear();
         long timestampMs = System.currentTimeMillis();
         File[] files = event.getFiles();
-        eventSink.setLogFile(findTelemetryLogFile(files));
+        rememberProjectDirectory(files);
 
         if (files == null || files.length == 0) {
             interactionListener.onCompileStarted(
@@ -229,20 +225,25 @@ public class BlueJApiAdapter implements
         compilingClassNames.clear();
     }
 
-    private File findTelemetryLogFile(File[] files) {
+    private void rememberProjectDirectory(File[] files) {
         if (files == null || files.length == 0)
-            return null;
+            return;
 
         File directory = files[0].getAbsoluteFile().getParentFile();
         while (directory != null) {
             File projectSettings = new File(directory, "package.bluej");
 
-            if (projectSettings.isFile())
-                return new File(directory, "bluej-telemetry.log");
+            if (projectSettings.isFile()) {
+                projectDirectory = directory;
+                return;
+            }
 
             directory = directory.getParentFile();
         }
-        return null;
+    }
+
+    public File getProjectDirectory() {
+        return projectDirectory;
     }
 
     private String getClassName(File file) {

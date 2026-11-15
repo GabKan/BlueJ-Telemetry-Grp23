@@ -1,6 +1,6 @@
 package org.comp3607.bluej;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.*;
 
 import org.comp3607.collector.*;
@@ -18,13 +18,7 @@ final class BlueJApiAdapterTestSupport {
         );
     }
 
-    static FileLoggingEventSink eventSink(BufferedEventSink source, Path directory) {
-        FileLoggingEventSink sink = new FileLoggingEventSink(source);
-        sink.setLogFile(directory.resolve("bluej-telemetry.log").toFile());
-        return sink;
-    }
-
-    static BlueJApiAdapter adapter(FileLoggingEventSink sink) {
+    static BlueJApiAdapter adapter(BufferedEventSink sink) {
         TelemetryEventFactory factory = new TelemetryEventFactory();
         return new BlueJApiAdapter(
             null,
@@ -32,7 +26,6 @@ final class BlueJApiAdapterTestSupport {
             new ExecutionEventListener(sink, factory),
             new ClassEventListener(sink, factory),
             new InteractionEventListener(sink, factory, SESSION_START_MS),
-            sink,
             SESSION_START_MS
         );
     }
