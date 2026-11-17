@@ -42,9 +42,17 @@ The extension records one `EXECUTION` event after a method invocation, including
 the class name and whether it exited because of a runtime exception. It also
 records class deletions, renames, and inferred creation on a class's first
 successful compile in the current session. Compile events are used as a proxy
-for editing activity; keyboard input and typing cadence are not captured.
+for editing activity; exact keystrokes and typing cadence are not captured.
 Periods of at least one minute between observed activity callbacks are
 recorded as estimated idle time.
+
+## Editor typing telemetry
+
+Visible Java editors are sampled about every 250 ms. Text-length changes are
+classified as typing (1 to 20 characters), paste (over 20), or deletion; a
+no-change pause becomes idle after 2 seconds. Only text lengths and timestamps
+are recorded, not source text or keystrokes. This activity is saved in the raw
+`.telemetry/` JSON and is not included in the existing reports.
 
 ## Linux setup
 

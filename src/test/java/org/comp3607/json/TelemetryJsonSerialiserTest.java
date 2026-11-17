@@ -1,54 +1,79 @@
 package org.comp3607.json;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.comp3607.collector.BufferedEventSink;
+import org.comp3607.export.ExportFileNamer;
+import org.comp3607.export.JsonFileExporter;
 import org.comp3607.model.EventType;
 import org.comp3607.model.SessionMetadata;
 import org.comp3607.model.TelemetryEvent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 class TelemetryJsonSerialiserTest {
+    @TempDir
+    Path temporaryDirectory;
 
     @Test
-    void serialisesSessionAndFullEventDataAsJson() {
-        SessionMetadata metadata = new SessionMetadata("session-1", "unknown", 100L, 300L);
-        BufferedEventSink source = new BufferedEventSink(metadata);
+    void writesEditorSamplesToRawTelemetryAndReadsSessionEvents() throws IOException {
+        BufferedEventSink source = new BufferedEventSink(
+            new SessionMetadata("session-1", "unknown", 100L, 300L)
+        );
+        source.accept(new TelemetryEvent(
+            EventType.EXECUTION, 250L, 150L, Map.of("className", "Example")
+        ));
 
-        Map<String, Object> diagnostic = new HashMap<>();
-        diagnostic.put("errorCode", null);
-        diagnostic.put("lineNumber", 12);
-        diagnostic.put("message", "Expected \"value\"\nnext line");
+        Map<String, Object> activity = new HashMap<>();
+        activity.put("segments", List.of(Map.of(
+            "class", "Example", "label", "typing", "chars", 4
+        )));
+        activity.put("summary", Map.of("editCount", 1));
 
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("success", false);
-        eventData.put("errors", List.of(diagnostic));
-        source.accept(new TelemetryEvent(EventType.COMPILE_FINISH, 250L, 150L, eventData));
+        Path telemetryFile = temporaryDirectory.resolve("telemetry.json");
+        JsonFileExporter exporter = new JsonFileExporter(
+            new TelemetryJsonSerialiser(),
+            new ExportFileNamer(),
+            temporaryDirectory
+        );
+        exporter.export(source, telemetryFile, activity);
 
-        String json = new TelemetryJsonSerialiser().serialise(source);
+        JsonObject root = JsonParser.parseString(
+            java.nio.file.Files.readString(telemetryFile)
+        ).getAsJsonObject();
+        JsonObject savedActivity = root.getAsJsonObject("gui")
+            .getAsJsonObject("editorActivity");
+        assertEquals(4, savedActivity.getAsJsonArray("segments").get(0)
+            .getAsJsonObject().get("chars").getAsInt());
+        assertTrue(root.has("events"));
 
-        assertTrue(json.contains("\"sessionId\": \"session-1\""));
-        assertTrue(json.contains("\"durationMs\": 200"));
-        assertTrue(json.contains("\"totalCompilationAttempts\": 1"));
-        assertTrue(json.contains("\"type\": \"COMPILE_FINISH\""));
-        assertTrue(json.contains("\"timestampMs\": 250"));
-        assertTrue(json.contains("\"errorCode\": null"));
-        assertTrue(json.contains("\"message\": \"Expected \\\"value\\\"\\nnext line\""));
+        BufferedEventSink loaded = new TelemetryJsonReader().read(telemetryFile);
+        assertEquals("session-1", loaded.metadata().getSessionId());
+        assertEquals(1, loaded.snapshot().size());
+        assertEquals(EventType.EXECUTION, loaded.snapshot().get(0).getType());
     }
 
     @Test
-    void serialisesAnEmptySessionWithAnEmptyEventsArray() {
+    void writesEmptyEventsWhenThereIsNoSessionActivity() {
         BufferedEventSink source = new BufferedEventSink(
             new SessionMetadata("empty", "unknown", 100L, 100L)
         );
 
-        String json = new TelemetryJsonSerialiser().serialise(source);
+        JsonObject root = JsonParser.parseString(
+            new TelemetryJsonSerialiser().serialise(source)
+        ).getAsJsonObject();
 
-        assertTrue(json.contains("\"totalCompilationAttempts\": 0"));
-        assertTrue(json.contains("\"events\": []"));
+        assertEquals(0, root.getAsJsonArray("events").size());
+        assertTrue(!root.has("gui"));
     }
 }

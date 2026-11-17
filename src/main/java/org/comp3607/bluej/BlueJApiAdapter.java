@@ -10,7 +10,7 @@ import bluej.extensions2.event.*;
 import bluej.extensions2.event.InvocationFinishedEvent.EventType;
 
 public class BlueJApiAdapter implements
-    BlueJAdapter, CompileListener, InvocationFinishedListener, ClassListener {
+    CompileListener, InvocationFinishedListener, ClassListener {
     private final BlueJ bluej;
     private final CompileEventListener compileListener;
     private final ExecutionEventListener executionListener;
@@ -38,18 +38,40 @@ public class BlueJApiAdapter implements
         this.sessionStartMs = sessionStartMs;
     }
 
-    @Override
     public void registerEventListeners() {
         bluej.addCompileListener(this);
         bluej.addInvocationFinishedListener(this);
         bluej.addClassListener(this);
     }
 
-    @Override
     public void unregisterEventListeners() {
         bluej.removeCompileListener(this);
         bluej.removeInvocationFinishedListener(this);
         bluej.removeClassListener(this);
+    }
+
+    /** Records the project that is currently open when the extension starts. */
+    public void rememberOpenProjectDirectory() {
+        if (bluej == null)
+            return;
+
+        try {
+            BPackage currentPackage = bluej.getCurrentPackage();
+            if (currentPackage != null) {
+                projectDirectory = currentPackage.getProject().getDir();
+                return;
+            }
+
+            BProject[] projects = bluej.getOpenProjects();
+            if (projects.length > 0) {
+                projectDirectory = projects[0].getDir();
+            }
+        } catch (ProjectNotOpenException exception) {
+            System.err.println(
+                "BlueJ Telemetry could not find the open project directory: "
+                    + exception.getMessage()
+            );
+        }
     }
 
     // BlueJ invocation callback, called after a method or object interaction finishes.

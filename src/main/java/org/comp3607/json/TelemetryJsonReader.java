@@ -40,10 +40,12 @@ public class TelemetryJsonReader {
         }
 
         JsonObject session = objectField(root, "session");
-        String sessionId = stringField(session, "sessionId");
-        String studentId = nullableStringField(session, "studentId");
-        long startMs = longField(session, "startMs");
-        long endMs = longField(session, "endMs");
+        String sessionId = stringField(session, fieldName(session, "session_id", "sessionId"));
+        String studentId = nullableStringField(
+            session, fieldName(session, "user_id", "studentId")
+        );
+        long startMs = longField(session, fieldName(session, "start_time", "startMs"));
+        long endMs = longField(session, fieldName(session, "end_time", "endMs"));
 
         BufferedEventSink source = new BufferedEventSink(
             new SessionMetadata(sessionId, studentId, startMs, endMs)
@@ -73,6 +75,17 @@ public class TelemetryJsonReader {
             throw new IOException("Missing or invalid JSON object field: " + name);
         }
         return value.getAsJsonObject();
+    }
+
+    private String fieldName(JsonObject object, String currentName, String oldName)
+        throws IOException {
+        if (object.has(currentName)) {
+            return currentName;
+        }
+        if (object.has(oldName)) {
+            return oldName;
+        }
+        throw new IOException("Missing telemetry JSON field: " + currentName);
     }
 
     private JsonArray arrayField(JsonObject object, String name) throws IOException {

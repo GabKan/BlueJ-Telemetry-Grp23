@@ -12,7 +12,6 @@ import org.comp3607.analytics.ReportDataBuilder;
 import org.comp3607.analytics.TimeFormatter;
 import org.comp3607.api.EventSource;
 import org.comp3607.api.Exporter;
-
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;

@@ -1,5 +1,6 @@
 package org.comp3607.bluej;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -19,6 +20,7 @@ public class TelemetryExtension extends Extension {
     private String sessionId;
     private BufferedEventSink eventSource;
     private BlueJApiAdapter adapter;
+    private BlueJEditorActivityTracker editorActivityTracker;
 
     // BlueJ Extension API lifecycle hook.
     @Override
@@ -51,7 +53,11 @@ public class TelemetryExtension extends Extension {
             interactionListener,
             sessionStartMs
         );
+        adapter.rememberOpenProjectDirectory();
         adapter.registerEventListeners();
+
+        editorActivityTracker = new BlueJEditorActivityTracker(bluej);
+        editorActivityTracker.start();
 
         System.out.println("BlueJ Telemetry extension started");
     }
@@ -62,6 +68,10 @@ public class TelemetryExtension extends Extension {
         if (adapter != null)
             adapter.unregisterEventListeners();
 
+        if (editorActivityTracker != null) {
+            editorActivityTracker.stop();
+        }
+
         if (eventSource != null) {
             long sessionEndMs = System.currentTimeMillis();
             eventSource.updateMetadata(
@@ -70,8 +80,16 @@ public class TelemetryExtension extends Extension {
                 )
             );
 
-            if (adapter != null && adapter.getProjectDirectory() != null) {
-                Path projectDirectory = adapter.getProjectDirectory().toPath();
+            File observedProjectDirectory = null;
+            if (editorActivityTracker != null) {
+                observedProjectDirectory = editorActivityTracker.getProjectDirectory();
+            }
+            if (observedProjectDirectory == null && adapter != null) {
+                observedProjectDirectory = adapter.getProjectDirectory();
+            }
+
+            if (observedProjectDirectory != null) {
+                Path projectDirectory = observedProjectDirectory.toPath();
                 Path telemetryFile = projectDirectory.resolve(".telemetry")
                     .resolve(new ExportFileNamer().nameFor(eventSource.metadata()));
                 try {
@@ -80,7 +98,12 @@ public class TelemetryExtension extends Extension {
                         new ExportFileNamer(),
                         projectDirectory.resolve(".telemetry")
                     );
-                    jsonExporter.export(eventSource, telemetryFile);
+                    jsonExporter.export(
+                        eventSource,
+                        telemetryFile,
+                        editorActivityTracker == null
+                            ? null : editorActivityTracker.getEditorActivity()
+                    );
                 } catch (IOException exception) {
                     System.err.println(
                         "BlueJ Telemetry could not save session telemetry: "

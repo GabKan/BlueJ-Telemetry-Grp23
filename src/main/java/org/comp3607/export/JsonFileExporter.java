@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import org.comp3607.api.EventSource;
 import org.comp3607.api.Exporter;
@@ -27,7 +28,23 @@ public class JsonFileExporter implements Exporter {
 
     @Override
     public void export(EventSource source, Path target) throws IOException {
-        String json = serialiser.serialise(source);
+        write(source, target, null);
+    }
+
+    public void export(
+        EventSource source,
+        Path target,
+        Map<String, Object> editorActivity
+    ) throws IOException {
+        write(source, target, editorActivity);
+    }
+
+    private void write(
+        EventSource source,
+        Path target,
+        Map<String, Object> editorActivity
+    ) throws IOException {
+        String json = serialiser.serialise(source, editorActivity);
         Path parent = target.getParent();
         if (parent != null) {
             Files.createDirectories(parent);

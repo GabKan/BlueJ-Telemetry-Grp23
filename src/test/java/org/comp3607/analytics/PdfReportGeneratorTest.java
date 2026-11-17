@@ -11,7 +11,6 @@ import org.comp3607.report.PdfReportGenerator;
 import org.junit.jupiter.api.Test;
 
 public class PdfReportGeneratorTest {
-
     @Test
     public void generate_sampleData_createsPdfFile() throws IOException {
         long three = 3;

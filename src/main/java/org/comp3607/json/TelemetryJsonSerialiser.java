@@ -9,8 +9,17 @@ import org.comp3607.api.EventSource;
 public class TelemetryJsonSerialiser {
 
     public String serialise(EventSource source) {
+        return serialise(source, null);
+    }
+
+    public String serialise(EventSource source, Map<String, Object> editorActivity) {
         Map<String, Object> json = new HashMap<>();
-        json.putAll(new SessionJsonBuilder().build(source));
+        json.put("session", new SessionJsonBuilder().build(source));
+        if (editorActivity != null) {
+            Map<String, Object> gui = new HashMap<>();
+            gui.put("editorActivity", editorActivity);
+            json.put("gui", gui);
+        }
         json.putAll(new EventsJsonBuilder().build(source));
 
         return serialise(json);

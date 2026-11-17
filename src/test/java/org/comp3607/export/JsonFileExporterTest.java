@@ -41,7 +41,7 @@ class JsonFileExporterTest {
         assertTrue(Files.isDirectory(outputDirectory));
         assertTrue(Files.isRegularFile(jsonFile));
         String json = Files.readString(jsonFile);
-        assertTrue(json.contains("\"sessionId\": \"session-42\""));
+        assertTrue(json.contains("\"session_id\": \"session-42\""));
         assertTrue(json.contains("\"type\": \"EXECUTION\""));
         assertTrue(json.contains("\"exception\": \"EXCEPTION_EXIT\""));
     }
