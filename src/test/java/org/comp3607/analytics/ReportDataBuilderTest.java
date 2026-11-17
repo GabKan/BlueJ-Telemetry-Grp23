@@ -15,9 +15,15 @@ public class ReportDataBuilderTest {
 
     private static class FakeEventSource implements EventSource {
         private final List<TelemetryEvent> events;
+        private final long endMs;
 
         FakeEventSource(List<TelemetryEvent> events) {
+            this(events, 3000);
+        }
+
+        FakeEventSource(List<TelemetryEvent> events, long endMs) {
             this.events = events;
+            this.endMs = endMs;
         }
 
         public List<TelemetryEvent> snapshot() {
@@ -25,7 +31,7 @@ public class ReportDataBuilderTest {
         }
 
         public SessionMetadata metadata() {
-            return new SessionMetadata("test-session", "student-id", 0, 3000);
+            return new SessionMetadata("test-session", "student-id", 0, endMs);
         }
     }
 
@@ -86,16 +92,26 @@ public class ReportDataBuilderTest {
     }
 
     @Test
+    public void build_mixedSession_IdleIsTotalDurationMinusActiveTime() {
+        ReportDataBuilder builder = new ReportDataBuilder();
+
+        ReportData data = builder.build(new FakeEventSource(mixedSession(), 10000));
+
+        assertEquals(3000, data.getActiveTimeMs());
+        assertEquals(7000, data.getIdleTimeMs());
+    }
+
+    @Test
     public void build_emptySession() {
         ReportDataBuilder builder = new ReportDataBuilder();
 
-        ReportData data = builder.build(new FakeEventSource(new ArrayList<TelemetryEvent>()));
+        ReportData data = builder.build(new FakeEventSource(new ArrayList<TelemetryEvent>(), 5000));
 
         assertTrue(data.isEmpty());
         assertEquals(0.0, data.getCompileSuccessRate(), 0.0001);
         assertEquals(0, data.getErrorFrequency().size());
         assertEquals(0, data.getActiveTimeMs());
-        assertEquals(0, data.getIdleTimeMs());
+        assertEquals(5000, data.getIdleTimeMs());
         assertEquals(0.0, data.getCompileToRunRatio(), 0.0001);
         assertEquals(0, data.getClassTimeline().size());
     }

@@ -32,7 +32,8 @@ public class TopErrorsTableBuilder {
 
             if (bestType != null) {
                 alreadyUsed.add(bestType);
-                table = table + "\n" + bestType + "|" + bestCount;
+                String displayType = bestType.replace('\r', ' ').replace('\n', ' ');
+                table = table + "\n" + displayType + "|" + bestCount;
             }
         }
 

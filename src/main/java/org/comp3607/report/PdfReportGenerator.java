@@ -112,6 +112,11 @@ public class PdfReportGenerator implements Exporter {
 
         for (String line : lines) {
             String[] cells = line.split("\\|", TABLE_COLUMNS);
+            if (cells.length != TABLE_COLUMNS) {
+                table.addCell(new Phrase(line));
+                table.addCell(new Phrase(""));
+                continue;
+            }
             table.addCell(new Phrase(cells[0]));
             table.addCell(new Phrase(cells[1]));
         }

@@ -34,7 +34,14 @@ public class ReportDataBuilder {
 
         Map<String, Long> times = timeAggregator.calculate(events);
         long activeTime = times.get(ActiveIdleTimeAggregator.ACTIVE_KEY);
-        long idleTime = times.get(ActiveIdleTimeAggregator.IDLE_KEY);
+        long sessionDuration = source.metadata().getEndMs() - source.metadata().getStartMs();
+        if (sessionDuration < 0) {
+            sessionDuration = 0;
+        }
+        if (activeTime > sessionDuration) {
+            activeTime = sessionDuration;
+        }
+        long idleTime = sessionDuration - activeTime;
 
         return new ReportData(sessionId, events.size(), totalCompiles, passedCompiles,
                 successRate, errors, totalRuns, activeTime, idleTime, ratio, timeline);

@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import org.comp3607.collector.*;
 import org.comp3607.export.ExportFileNamer;
 import org.comp3607.export.JsonFileExporter;
-import org.comp3607.json.TelemetryJsonReader;
 import org.comp3607.json.TelemetryJsonSerialiser;
 import org.comp3607.model.SessionMetadata;
 import org.comp3607.report.JsonReportGenerator;
@@ -21,6 +20,24 @@ public class TelemetryExtension extends Extension {
     private BufferedEventSink eventSource;
     private BlueJApiAdapter adapter;
     private BlueJEditorActivityTracker editorActivityTracker;
+
+    static void generateReportsForSession(
+        org.comp3607.api.EventSource source,
+        java.nio.file.Path projectDirectory,
+        String sessionId
+    ) throws IOException {
+        if (source == null || projectDirectory == null) {
+            return;
+        }
+
+        Path jsonReport = projectDirectory.resolve("json_reports")
+            .resolve(JsonReportGenerator.reportFileName(sessionId));
+        new JsonReportGenerator().export(source, jsonReport);
+
+        Path pdfReport = projectDirectory.resolve("pdf_reports")
+            .resolve(PdfReportGenerator.reportFileName(sessionId));
+        new PdfReportGenerator().export(source, pdfReport);
+    }
 
     // BlueJ Extension API lifecycle hook.
     @Override
@@ -112,35 +129,11 @@ public class TelemetryExtension extends Extension {
                     return;
                 }
 
-                BufferedEventSink savedSource;
                 try {
-                    savedSource = new TelemetryJsonReader().read(telemetryFile);
+                    generateReportsForSession(eventSource, projectDirectory, sessionId);
                 } catch (IOException exception) {
                     System.err.println(
-                        "BlueJ Telemetry could not read session telemetry for reports: "
-                            + exception.getMessage()
-                    );
-                    return;
-                }
-
-                Path jsonReport = projectDirectory.resolve("json_reports")
-                    .resolve(JsonReportGenerator.reportFileName(sessionId));
-                try {
-                    new JsonReportGenerator().export(savedSource, jsonReport);
-                } catch (IOException exception) {
-                    System.err.println(
-                        "BlueJ Telemetry could not create the JSON analysis report: "
-                            + exception.getMessage()
-                    );
-                }
-
-                Path pdfReport = projectDirectory.resolve("pdf_reports")
-                    .resolve(PdfReportGenerator.reportFileName(sessionId));
-                try {
-                    new PdfReportGenerator().export(savedSource, pdfReport);
-                } catch (IOException exception) {
-                    System.err.println(
-                        "BlueJ Telemetry could not create the PDF report: "
+                        "BlueJ Telemetry could not create the session reports from the current telemetry: "
                             + exception.getMessage()
                     );
                 }
