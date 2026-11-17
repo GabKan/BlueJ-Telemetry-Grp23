@@ -8,6 +8,8 @@ import org.comp3607.model.TelemetryEvent;
 
 public class ErrorFrequencyAggregator {
 
+    private static final int MAX_NAME_LENGTH = 45;
+
     // Returns a map of error type to how many times it happened 
 
     public Map<String, Long> calculate(List<TelemetryEvent> events) {
@@ -37,10 +39,26 @@ public class ErrorFrequencyAggregator {
         if (error instanceof Map<?, ?>) {
             Object message = ((Map<?, ?>) error).get("message");
             if (message != null) {
-                return String.valueOf(message);
+                return cleanName(String.valueOf(message));
             }
         }
-        return String.valueOf(error);
+        return cleanName(String.valueOf(error));
+    }
+
+    // Keeps the first line of the message and cuts it short to fit in the message
+    
+    private String cleanName(String name) {
+        String cleaned = name;
+        int lineBreak = cleaned.indexOf("\n");
+        if (lineBreak >= 0) {
+            cleaned = cleaned.substring(0, lineBreak);
+        }
+
+        cleaned = cleaned.replace("|", "/").trim();
+        if (cleaned.length() > MAX_NAME_LENGTH) {
+            cleaned = cleaned.substring(0, MAX_NAME_LENGTH) + "...";
+        }
+        return cleaned;
     }
 
     private void addOne(Map<String, Long> counts, String type) {

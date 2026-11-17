@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.Font;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.comp3607.analytics.ReportData;
@@ -30,16 +32,34 @@ public class ErrorTypeBarChart implements ChartRenderer {
     private static final Font TITLE_FONT = new Font("Calibri", Font.BOLD, 22);
     private static final Font TEXT_FONT = new Font("Calibri", Font.PLAIN, 16);
     private static final double UPPER_MARGIN = 0.15;
+    private static final int MAX_BARS = 6;
 
     public void render(ReportData reportData, Path target) throws IOException {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         Map<String, Long> errors = reportData.getErrorFrequency();
-        for (String type : errors.keySet()) {
-            dataset.addValue(errors.get(type), "Errors", type);
+        List<String> alreadyUsed = new ArrayList<String>();
+
+        for (int round = 0; round < MAX_BARS; round++) {
+            String bestType = null;
+            long bestCount = 0;
+
+            for (String type : errors.keySet()) {
+                long count = errors.get(type);
+                if (!alreadyUsed.contains(type) && count > bestCount) {
+                    bestType = type;
+                    bestCount = count;
+                }
+            }
+            if (bestType != null) {
+                alreadyUsed.add(bestType);
+                dataset.addValue(bestCount, "Errors", bestType);
+            }
         }
 
+        // Horizontal bars leave room on the left for the error names
+        
         JFreeChart chart = ChartFactory.createBarChart("Compile Errors by Type", "",
-                "Count", dataset, PlotOrientation.VERTICAL, false, false, false);
+                "Count", dataset, PlotOrientation.HORIZONTAL, false, false, false);
         chart.setBackgroundPaint(Color.WHITE);
         chart.setBorderVisible(false);
         chart.getTitle().setFont(TITLE_FONT);

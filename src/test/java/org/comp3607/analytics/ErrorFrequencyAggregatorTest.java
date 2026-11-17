@@ -18,6 +18,18 @@ public class ErrorFrequencyAggregatorTest {
         return new TelemetryEvent(EventType.COMPILE_FINISH, time, time, data);
     }
 
+    private TelemetryEvent makeFailedCompile(String message) {
+        Map<String, Object> error = new HashMap<String, Object>();
+        error.put("message", message);
+        List<Map<String, Object>> errors = new ArrayList<Map<String, Object>>();
+        errors.add(error);
+
+        Map<String, Object> data = new HashMap<String, Object>();
+        data.put("success", false);
+        data.put("errors", errors);
+        return new TelemetryEvent(EventType.COMPILE_FINISH, 1000, 1000, data);
+    }
+
     @Test
     public void errorFrequency_repeatedErrors() {
         List<TelemetryEvent> events = new ArrayList<TelemetryEvent>();
@@ -52,5 +64,34 @@ public class ErrorFrequencyAggregatorTest {
         Map<String, Long> counts = aggregator.calculate(events);
 
         assertEquals(0, counts.size());
+    }
+
+    @Test
+    public void errorFrequency_longMessages() {
+        List<TelemetryEvent> events = new ArrayList<TelemetryEvent>();
+        events.add(makeFailedCompile(
+        "cannot find symbol\n  symbol:   variable y\n  location: class Hello"));
+        events.add(makeFailedCompile(
+        "cannot find symbol\n  symbol:   variable x\n  location: class Hello"));
+
+        Map<String, Long> counts = aggregator.calculate(events);
+
+        long symbols = counts.get("cannot find symbol");
+        assertEquals(1, counts.size());
+        assertEquals(2, symbols);
+    }
+
+    @Test
+    public void errorFrequency_longName() {
+        String longMessage = "unnamed classes are a preview feature and are disabled by default.";
+        List<TelemetryEvent> events = new ArrayList<TelemetryEvent>();
+        events.add(makeFailedCompile(longMessage));
+
+        Map<String, Long> counts = aggregator.calculate(events);
+
+        String cutName = longMessage.substring(0, 45) + "...";
+        long count = counts.get(cutName);
+        assertEquals(1, counts.size());
+        assertEquals(1, count);
     }
 }
