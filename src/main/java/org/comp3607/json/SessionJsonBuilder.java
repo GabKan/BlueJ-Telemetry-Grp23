@@ -6,14 +6,24 @@ import java.util.Map;
 import org.comp3607.api.EventSource;
 import org.comp3607.model.SessionMetadata;
 
-public class SessionJsonBuilder {
+public class SessionJsonBuilder implements SectionBuilder {
 
     private static final double ROUND = 10000.0;
 
+    @Override
+    public String sectionName() {
+        return "session";
+    }
+
+    @Override
     public Map<String, Object> build(EventSource source) {
         SessionMetadata meta = source.metadata();
 
-        double duration = (meta.getEndMs() - meta.getStartMs()) / 1000.0;
+        long elapsedMs = meta.getEndMs() - meta.getStartMs();
+        if (elapsedMs < 0) {
+            elapsedMs = 0;
+        }
+        double duration = elapsedMs / 1000.0;
 
         Map<String, Object> session = new HashMap<>();
         session.put("session_id", meta.getSessionId());
