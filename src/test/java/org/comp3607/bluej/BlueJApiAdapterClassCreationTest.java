@@ -3,6 +3,7 @@ package org.comp3607.bluej;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -34,5 +35,36 @@ class BlueJApiAdapterClassCreationTest {
         assertEquals(EXPECTED_CREATION_COUNT, creations.size());
         assertTrue(source.snapshot().stream()
             .anyMatch(event -> event.getType() == EventType.CLASS_CREATED));
+    }
+
+    @Test
+    void doesNotRecordExistingSourceAsCreatedAfterSessionStarts() throws Exception {
+        Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
+        BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
+        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
+        adapter.rememberExistingClasses(project.toFile());
+
+        BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, sourceFile);
+
+        assertEquals(0, source.snapshot().stream()
+            .filter(event -> event.getType() == EventType.CLASS_CREATED)
+            .count());
+    }
+
+    @Test
+    void recordsSourceAddedAfterTheStartupSnapshotAsCreated() throws Exception {
+        BlueJApiAdapterTestSupport.sourceFile(project);
+        BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
+        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
+        adapter.rememberExistingClasses(project.toFile());
+        Path newSourceFile = Files.createFile(project.resolve("NewExample.java"));
+
+        BlueJCompileTestSupport.startCompilation(adapter, newSourceFile);
+        BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, newSourceFile);
+
+        assertEquals(EXPECTED_CREATION_COUNT, source.snapshot().stream()
+            .filter(event -> event.getType() == EventType.CLASS_CREATED)
+            .count());
     }
 }

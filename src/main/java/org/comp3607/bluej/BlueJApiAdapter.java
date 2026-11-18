@@ -1,7 +1,12 @@
 package org.comp3607.bluej;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Stream;
 
 import org.comp3607.collector.*;
 
@@ -59,16 +64,41 @@ public class BlueJApiAdapter implements
             BPackage currentPackage = bluej.getCurrentPackage();
             if (currentPackage != null) {
                 projectDirectory = currentPackage.getProject().getDir();
-                return;
+            } else {
+                BProject[] projects = bluej.getOpenProjects();
+                if (projects.length > 0) {
+                    projectDirectory = projects[0].getDir();
+                }
             }
-
-            BProject[] projects = bluej.getOpenProjects();
-            if (projects.length > 0) {
-                projectDirectory = projects[0].getDir();
-            }
+            rememberExistingClasses(projectDirectory);
         } catch (ProjectNotOpenException exception) {
             System.err.println(
                 "BlueJ Telemetry could not find the open project directory: "
+                    + exception.getMessage()
+            );
+        }
+    }
+
+    void rememberExistingClasses(File directory) {
+        if (directory == null)
+            return;
+
+        try (Stream<Path> files = Files.walk(directory.toPath())) {
+            files.filter(Files::isRegularFile)
+                .map(Path::getFileName)
+                .map(Path::toString)
+                .filter(fileName -> fileName.endsWith(".java"))
+                .map(fileName -> fileName.substring(0, fileName.length() - 5))
+                .filter(className -> !knownClassNames.contains(className))
+                .forEach(knownClassNames::add);
+        } catch (IOException exception) {
+            System.err.println(
+                "BlueJ Telemetry could not scan existing project classes: "
+                    + exception.getMessage()
+            );
+        } catch (UncheckedIOException exception) {
+            System.err.println(
+                "BlueJ Telemetry could not finish scanning existing project classes: "
                     + exception.getMessage()
             );
         }
