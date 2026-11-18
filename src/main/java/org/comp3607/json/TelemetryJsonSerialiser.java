@@ -1,6 +1,8 @@
 package org.comp3607.json;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -8,19 +10,25 @@ import org.comp3607.api.EventSource;
 
 public class TelemetryJsonSerialiser {
 
+    private final List<SectionBuilder> sections = Arrays.asList(new SessionJsonBuilder(), new CompilationJsonBuilder(), new ExecutionJsonBuilder(), new CodeJsonBuilder(), new EventsJsonBuilder());
+
     public String serialise(EventSource source) {
         return serialise(source, null);
     }
 
     public String serialise(EventSource source, Map<String, Object> editorActivity) {
-        Map<String, Object> json = new HashMap<>();
-        json.put("session", new SessionJsonBuilder().build(source));
-        if (editorActivity != null) {
-            Map<String, Object> gui = new HashMap<>();
-            gui.put("editorActivity", editorActivity);
-            json.put("gui", gui);
+        Map<String, Object> json = new LinkedHashMap<>();
+        json.put("schema_version", "1.0");
+
+        for (SectionBuilder section : sections) {
+            if ("events".equals(section.sectionName())) {
+                Map<String, Object> gui = new HashMap<>();
+                gui.put("editorActivity",
+                        editorActivity == null ? new HashMap<String, Object>() : editorActivity);
+                json.put("gui", gui);
+            }
+            json.put(section.sectionName(), section.build(source));
         }
-        json.putAll(new EventsJsonBuilder().build(source));
 
         return serialise(json);
     }
@@ -44,8 +52,7 @@ public class TelemetryJsonSerialiser {
             appendArray(output, (List<?>) value, indentation);
         } else {
             throw new IllegalArgumentException(
-                "Unsupported value in telemetry JSON: " + value.getClass().getName()
-            );
+                    "Invalid telemetry JSON value: " + value.getClass().getName());
         }
     }
 
@@ -116,7 +123,7 @@ public class TelemetryJsonSerialiser {
 
     private void appendIndentation(StringBuilder output, int indentation) {
         for (int index = 0; index < indentation; index++) {
-            output.append("  ");
+            output.append(" ");
         }
     }
 }
