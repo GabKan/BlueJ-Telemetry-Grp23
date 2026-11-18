@@ -9,10 +9,17 @@ import org.comp3607.api.EventSource;
 import org.comp3607.model.EventType;
 import org.comp3607.model.TelemetryEvent;
 
-public class CompilationJsonBuilder {
+public class CompilationJsonBuilder implements SectionBuilder {
 
     private static final double ROUND = 10000.0;
+    private static final int MAX_NAME_LENGTH = 45;
 
+    @Override
+    public String sectionName() {
+        return "compilation";
+    }
+
+    @Override
     public Map<String, Object> build(EventSource source) {
         int total = 0;
         int failed = 0;
@@ -20,28 +27,26 @@ public class CompilationJsonBuilder {
         Map<String, Object> errorsByType = new LinkedHashMap<>();
 
         for (TelemetryEvent event : source.snapshot()) {
-            if (event.getType() == EventType.COMPILE_START) {
-                total++;
-            } else if (event.getType() == EventType.COMPILE_FINISH) {
-                Map<String, Object> data = event.getData();
-                boolean success = Boolean.TRUE.equals(data.get("success"));
-                if (!success) {
-                    failed++;
-                }
-                Object errors = data.get("errors");
-                if (errors instanceof List<?>) {
-                    for (Object error : (List<?>) errors) {
-                        if (!(error instanceof Map<?, ?>)) {
-                            continue;
-                        }
-                        Object type = ((Map<?, ?>) error).get("type");
-                        String name = type == null ? "unknown" : String.valueOf(type);
-                        totalErrors++;
-                        int count = errorsByType.containsKey(name)
+            if (event.getType() != EventType.COMPILE_FINISH) {
+                continue;
+            }
+
+            total++;
+            Map<String, Object> data = event.getData();
+            boolean success = Boolean.TRUE.equals(data.get("success"));
+            if (!success) {
+                failed++;
+            }
+
+            Object errors = data.get("errors");
+            if (errors instanceof List<?>) {
+                for (Object error : (List<?>) errors) {
+                    String name = errorName(error);
+                    totalErrors++;
+                    int count = errorsByType.containsKey(name)
                             ? ((Number) errorsByType.get(name)).intValue()
                             : 0;
-                        errorsByType.put(name, count + 1);
-                    }
+                    errorsByType.put(name, count + 1);
                 }
             }
         }
@@ -55,5 +60,28 @@ public class CompilationJsonBuilder {
         compilation.put("total_errors", totalErrors);
         compilation.put("errors_by_type", errorsByType);
         return compilation;
+    }
+    
+    private String errorName(Object error) {
+        if (error instanceof Map<?, ?>) {
+            Object message = ((Map<?, ?>) error).get("message");
+            if (message != null) {
+                return cleanName(String.valueOf(message));
+            }
+        }
+        return cleanName(String.valueOf(error));
+    }
+
+    private String cleanName(String name) {
+        String cleaned = name;
+        int lineBreak = cleaned.indexOf("\n");
+        if (lineBreak >= 0) {
+            cleaned = cleaned.substring(0, lineBreak);
+        }
+        cleaned = cleaned.replace("|", "/").trim();
+        if (cleaned.length() > MAX_NAME_LENGTH) {
+            cleaned = cleaned.substring(0, MAX_NAME_LENGTH) + "...";
+        }
+        return cleaned;
     }
 }
