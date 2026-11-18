@@ -113,12 +113,3 @@ mvn package
 ```
 
 The plugin jar is created at `target/bluej-telemetry-plugin-1.0.0.jar`.
-
-### Troubleshooting
-
-| Problem | Cause | Fix |
-|---|---|---|
-| VS Code shows "Could not read maven project" | The Java extension kept an old error | Run **Java: Clean Java Language Server Workspace**, restart, then right-click `pom.xml` and select **Update Project** |
-| Tests fail with `UnsupportedClassVersionError` for a `bluej.extensions2` class | The test runner is using Java 17, but BlueJ 6 API classes require Java 21 | Select Java 21 or newer for the Maven and VS Code test runtimes. BlueJ's bundled JDK is under its installation folder in `jdk`. |
-| No reports appear | BlueJ may still be running an older plugin JAR, or no project event was observed | Install the new JAR, restart BlueJ, and compile or run a class before closing the session. |
-| Maven cannot resolve the BlueJ API dependency | The `lib-repo` folder is missing from your clone | Pull the latest repository changes so `lib-repo` is restored. |
