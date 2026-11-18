@@ -7,16 +7,22 @@ import org.comp3607.api.EventSource;
 import org.comp3607.model.EventType;
 import org.comp3607.model.TelemetryEvent;
 
-public class ExecutionJsonBuilder {
+public class ExecutionJsonBuilder implements SectionBuilder {
 
     private static final double ROUND = 10000.0;
 
+    @Override
+    public String sectionName() {
+        return "execution";
+    }
+
+    @Override
     public Map<String, Object> build(EventSource source) {
         int compiles = 0;
         int invocations = 0;
 
         for (TelemetryEvent event : source.snapshot()) {
-            if (event.getType() == EventType.COMPILE_START) {
+            if (event.getType() == EventType.COMPILE_FINISH) {
                 compiles++;
             } else if (event.getType() == EventType.EXECUTION) {
                 invocations++;
