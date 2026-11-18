@@ -54,24 +54,6 @@ no-change pause becomes idle after 2 seconds. Only text lengths and timestamps
 are recorded, not source text or keystrokes. This activity is saved in the raw
 `.telemetry/` JSON and is not included in the existing reports.
 
-## Linux setup
-
-From the repository folder, build the extension:
-
-```bash
-mvn package
-```
-
-After the build succeeds, close BlueJ and copy the new JAR into the user
-extensions folder:
-
-```bash
-cp target/bluej-telemetry-plugin-1.0.0.jar ~/.bluej/extensions2/
-```
-
-Restart BlueJ to load the updated JAR. BlueJ 6 uses `~/.bluej/extensions2/`;
-older BlueJ versions may use `~/.bluej/extensions/`.
-
 ## What the files and folders are
 
 | File or folder | What it is and where it belongs |
@@ -87,29 +69,3 @@ older BlueJ versions may use `~/.bluej/extensions/`.
 | `telemetry_<session-id>.json` | Session metadata and all raw events, written inside `.telemetry/`. |
 | `report_<session-id>.json` | Calculated session summary, compilation statistics, errors, activity time, and class timeline. |
 | `report_<session-id>.pdf` | Human-readable report generated from the same saved session telemetry. |
-
-## Build and test
-
-### Requirements
-
-- JDK 21 or newer for builds and tests that load the BlueJ 6 API. The plugin
-  source is still compiled for Java 17.
-- Apache Maven 3.9 or newer
-- BlueJ 6.0.1
-- VS Code users: install the "Extension Pack for Java"
-
-Run `mvn -v` and check that Maven uses the JDK you expect.
-
-### Build
-
-The BlueJ extension API dependency is stored in the `lib-repo` folder of this
-repository, and `pom.xml` reads it from there. Keep this folder when cloning or
-sharing the project; Maven needs it to compile the plugin.
-
-```bash
-git clone https://github.com/GabKan/BlueJ-Telemetry-Grp23.git
-cd BlueJ-Telemetry-Grp23
-mvn package
-```
-
-The plugin jar is created at `target/bluej-telemetry-plugin-1.0.0.jar`.
