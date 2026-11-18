@@ -3,9 +3,8 @@ package org.comp3607.analytics;
 import java.util.List;
 import java.util.Map;
 
+//  Holds every result the PDF needs. The report layer reads only this class.
 
-//  Holds every calculated value the PDF needs
- 
 public class ReportData {
 
     private final String sessionId;
@@ -19,11 +18,22 @@ public class ReportData {
     private final long idleTimeMs;
     private final double compileToRunRatio;
     private final List<String> classTimeline;
+    private final EditorActivity editorActivity;
 
-    // Creates the ReportData object with all the calculated values. The ReportDataBuilder calls this constructor.
-
-    public ReportData(String sessionId, int eventCount, int totalCompiles, int passedCompiles,double compileSuccessRate, Map<String, Long> errorFrequency, int totalRuns,
-    long activeTimeMs, long idleTimeMs, double compileToRunRatio,List<String> classTimeline) {
+    public ReportData(
+        String sessionId,
+        int eventCount,
+        int totalCompiles,
+        int passedCompiles,
+        double compileSuccessRate,
+        Map<String, Long> errorFrequency,
+        int totalRuns,
+        long activeTimeMs,
+        long idleTimeMs,
+        double compileToRunRatio,
+        List<String> classTimeline,
+        EditorActivity editorActivity
+    ) {
         this.sessionId = sessionId;
         this.eventCount = eventCount;
         this.totalCompiles = totalCompiles;
@@ -35,6 +45,12 @@ public class ReportData {
         this.idleTimeMs = idleTimeMs;
         this.compileToRunRatio = compileToRunRatio;
         this.classTimeline = classTimeline;
+
+        if (editorActivity == null) {
+            this.editorActivity = new EditorActivity();
+        } else {
+            this.editorActivity = editorActivity;
+        }
     }
 
     public String getSessionId() {
@@ -85,7 +101,11 @@ public class ReportData {
         return classTimeline;
     }
 
+    public EditorActivity getEditorActivity() {
+        return editorActivity;
+    }
+
     public boolean isEmpty() {
-        return eventCount == 0;
+        return eventCount == 0 && !editorActivity.isAvailable();
     }
 }

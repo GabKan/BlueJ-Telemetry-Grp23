@@ -6,15 +6,15 @@ import java.util.Map;
 import org.comp3607.api.EventSource;
 import org.comp3607.model.TelemetryEvent;
 
+//  Runs every aggregator and puts the answers into one ReportData object
 
-//  Runs every metric aggregator and puts the answers into one ReportData object.
- 
 public class ReportDataBuilder {
 
-    // Reads the events from the source, calculates all metrics and returns the results
-
     public ReportData build(EventSource source) {
-        
+        return build(source, null);
+    }
+
+    public ReportData build(EventSource source, Map<String, Object> editorActivity) {
         List<TelemetryEvent> events = source.snapshot();
         String sessionId = source.metadata().getSessionId();
 
@@ -34,16 +34,11 @@ public class ReportDataBuilder {
 
         Map<String, Long> times = timeAggregator.calculate(events);
         long activeTime = times.get(ActiveIdleTimeAggregator.ACTIVE_KEY);
-        long sessionDuration = source.metadata().getEndMs() - source.metadata().getStartMs();
-        if (sessionDuration < 0) {
-            sessionDuration = 0;
-        }
-        if (activeTime > sessionDuration) {
-            activeTime = sessionDuration;
-        }
-        long idleTime = sessionDuration - activeTime;
+        long idleTime = times.get(ActiveIdleTimeAggregator.IDLE_KEY);
+
+        EditorActivity editor = new EditorActivity(editorActivity);
 
         return new ReportData(sessionId, events.size(), totalCompiles, passedCompiles,
-                successRate, errors, totalRuns, activeTime, idleTime, ratio, timeline);
+                successRate, errors, totalRuns, activeTime, idleTime, ratio, timeline, editor);
     }
 }

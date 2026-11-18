@@ -15,15 +15,9 @@ public class ReportDataBuilderTest {
 
     private static class FakeEventSource implements EventSource {
         private final List<TelemetryEvent> events;
-        private final long endMs;
 
         FakeEventSource(List<TelemetryEvent> events) {
-            this(events, 3000);
-        }
-
-        FakeEventSource(List<TelemetryEvent> events, long endMs) {
             this.events = events;
-            this.endMs = endMs;
         }
 
         public List<TelemetryEvent> snapshot() {
@@ -31,7 +25,7 @@ public class ReportDataBuilderTest {
         }
 
         public SessionMetadata metadata() {
-            return new SessionMetadata("test-session", "student-id", 0, endMs);
+            return new SessionMetadata("test-session", "student-id", 0, 3000);
         }
     }
 
@@ -62,8 +56,30 @@ public class ReportDataBuilderTest {
         return events;
     }
 
+    private Map<String, Object> makeSection(long count, long totalMs, String key, long value) {
+        Map<String, Object> section = new HashMap<String, Object>();
+        section.put("count", count);
+        section.put("totalMs", totalMs);
+        section.put(key, value);
+        return section;
+    }
+
+    private Map<String, Object> makeActivity() {
+        long editCount = 64;
+        Map<String, Object> summary = new HashMap<String, Object>();
+        summary.put("typing", makeSection(10, 21266, "totalChars", 76));
+        summary.put("deletion", makeSection(7, 6541, "totalChars", 305));
+        summary.put("paste", makeSection(1, 234, "totalChars", 110));
+        summary.put("idle", makeSection(11, 53658, "longestMs", 8248));
+        summary.put("editCount", editCount);
+
+        Map<String, Object> activity = new HashMap<String, Object>();
+        activity.put("summary", summary);
+        return activity;
+    }
+
     @Test
-    public void build_mixedSession_Metrics() {
+    public void build_mixedSession_returnsMetrics() {
         ReportDataBuilder builder = new ReportDataBuilder();
 
         ReportData data = builder.build(new FakeEventSource(mixedSession()));
@@ -77,7 +93,7 @@ public class ReportDataBuilderTest {
     }
 
     @Test
-    public void build_mixedSession_CountsAndSessionId() {
+    public void build_mixedSession_returnsCountsAndSessionId() {
         ReportDataBuilder builder = new ReportDataBuilder();
 
         ReportData data = builder.build(new FakeEventSource(mixedSession()));
@@ -92,27 +108,55 @@ public class ReportDataBuilderTest {
     }
 
     @Test
-    public void build_mixedSession_IdleIsTotalDurationMinusActiveTime() {
+    public void build_emptySession_returnsZeroValues() {
         ReportDataBuilder builder = new ReportDataBuilder();
 
-        ReportData data = builder.build(new FakeEventSource(mixedSession(), 10000));
-
-        assertEquals(3000, data.getActiveTimeMs());
-        assertEquals(7000, data.getIdleTimeMs());
-    }
-
-    @Test
-    public void build_emptySession() {
-        ReportDataBuilder builder = new ReportDataBuilder();
-
-        ReportData data = builder.build(new FakeEventSource(new ArrayList<TelemetryEvent>(), 5000));
+        ReportData data = builder.build(new FakeEventSource(new ArrayList<TelemetryEvent>()));
 
         assertTrue(data.isEmpty());
         assertEquals(0.0, data.getCompileSuccessRate(), 0.0001);
         assertEquals(0, data.getErrorFrequency().size());
         assertEquals(0, data.getActiveTimeMs());
-        assertEquals(5000, data.getIdleTimeMs());
+        assertEquals(0, data.getIdleTimeMs());
         assertEquals(0.0, data.getCompileToRunRatio(), 0.0001);
         assertEquals(0, data.getClassTimeline().size());
+    }
+
+    @Test
+    public void build_noEditorActivity_isNotAvailable() {
+        ReportDataBuilder builder = new ReportDataBuilder();
+
+        ReportData data = builder.build(new FakeEventSource(mixedSession()));
+
+        assertFalse(data.getEditorActivity().isAvailable());
+        assertEquals(0, data.getEditorActivity().getTypingMs());
+    }
+
+    @Test
+    public void build_withEditorActivity_returnsEditorTotals() {
+        ReportDataBuilder builder = new ReportDataBuilder();
+
+        ReportData data = builder.build(new FakeEventSource(mixedSession()), makeActivity());
+
+        EditorActivity editor = data.getEditorActivity();
+        assertTrue(editor.isAvailable());
+        assertEquals(21266, editor.getTypingMs());
+        assertEquals(76, editor.getTypingChars());
+        assertEquals(6541, editor.getDeletionMs());
+        assertEquals(1, editor.getPasteCount());
+        assertEquals(53658, editor.getIdleMs());
+        assertEquals(8248, editor.getLongestIdleMs());
+        assertEquals(64, editor.getEditCount());
+    }
+
+    @Test
+    public void build_noEventsWithEditorActivity_isNotEmpty() {
+        ReportDataBuilder builder = new ReportDataBuilder();
+
+        ReportData data = builder.build(
+        new FakeEventSource(new ArrayList<TelemetryEvent>()), makeActivity());
+
+        assertFalse(data.isEmpty());
+        assertEquals(0, data.getTotalCompiles());
     }
 }

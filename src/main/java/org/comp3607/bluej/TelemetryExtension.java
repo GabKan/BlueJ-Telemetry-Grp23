@@ -3,8 +3,14 @@ package org.comp3607.bluej;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Map;
 
-import org.comp3607.collector.*;
+import org.comp3607.collector.BufferedEventSink;
+import org.comp3607.collector.ClassEventListener;
+import org.comp3607.collector.CompileEventListener;
+import org.comp3607.collector.ExecutionEventListener;
+import org.comp3607.collector.InteractionEventListener;
+import org.comp3607.collector.TelemetryEventFactory;
 import org.comp3607.export.ExportFileNamer;
 import org.comp3607.export.JsonFileExporter;
 import org.comp3607.json.TelemetryJsonSerialiser;
@@ -12,7 +18,8 @@ import org.comp3607.model.SessionMetadata;
 import org.comp3607.report.JsonReportGenerator;
 import org.comp3607.report.PdfReportGenerator;
 
-import bluej.extensions2.*;
+import bluej.extensions2.BlueJ;
+import bluej.extensions2.Extension;
 
 public class TelemetryExtension extends Extension {
     private long sessionStartMs;
@@ -26,6 +33,15 @@ public class TelemetryExtension extends Extension {
         java.nio.file.Path projectDirectory,
         String sessionId
     ) throws IOException {
+        generateReportsForSession(source, projectDirectory, sessionId, null);
+    }
+
+    static void generateReportsForSession(
+        org.comp3607.api.EventSource source,
+        java.nio.file.Path projectDirectory,
+        String sessionId,
+        Map<String, Object> editorActivity
+    ) throws IOException {
         if (source == null || projectDirectory == null) {
             return;
         }
@@ -34,9 +50,9 @@ public class TelemetryExtension extends Extension {
             .resolve(JsonReportGenerator.reportFileName(sessionId));
         new JsonReportGenerator().export(source, jsonReport);
 
-        Path pdfReport = projectDirectory.resolve("pdf_reports")
-            .resolve(PdfReportGenerator.reportFileName(sessionId));
-        new PdfReportGenerator().export(source, pdfReport);
+        new PdfReportGenerator().exportQuietly(
+            source, editorActivity, projectDirectory.resolve("pdf_reports")
+        );
     }
 
     // BlueJ Extension API lifecycle hook.
@@ -129,8 +145,15 @@ public class TelemetryExtension extends Extension {
                     return;
                 }
 
+                Map<String, Object> editorActivity = null;
+                if (editorActivityTracker != null) {
+                    editorActivity = editorActivityTracker.getEditorActivity();
+                }
+
                 try {
-                    generateReportsForSession(eventSource, projectDirectory, sessionId);
+                    generateReportsForSession(
+                        eventSource, projectDirectory, sessionId, editorActivity
+                    );
                 } catch (IOException exception) {
                     System.err.println(
                         "BlueJ Telemetry could not create the session reports from the current telemetry: "

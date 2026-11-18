@@ -4,14 +4,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.comp3607.analytics.EditorActivity;
 import org.comp3607.analytics.ReportData;
 import org.comp3607.analytics.ReportDataBuilder;
 import org.comp3607.analytics.TimeFormatter;
 import org.comp3607.api.EventSource;
 import org.comp3607.api.Exporter;
+
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
@@ -25,7 +28,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 
 
-//  Single entry point for the PDF report: calculates the data, draws the charts and tables and writes the two-page PDF. 
+//  Single entry point for the PDF report: calculates the data, draws the charts and tables
 
 public class PdfReportGenerator implements Exporter {
 
@@ -38,28 +41,44 @@ public class PdfReportGenerator implements Exporter {
     private static final int TEXT_SIZE = 11;
     private static final int TIMELINE_SIZE = 10;
     private static final int TABLE_COLUMNS = 2;
-    private static final double PERCENT = 100.0;
     private static final float TABLE_GAP = 6;
+    private static final double PERCENT = 100.0;
 
     public static String reportFileName(String sessionId) {
         return "report_" + sessionId + ".pdf";
     }
 
-// Calculates the report data from the event source and writes the PDF to the target.
-
     public void export(EventSource source, Path target) throws IOException {
+        export(source, null, target);
+    }
+
+    public void export(EventSource source, Map<String, Object> editorActivity, Path target)
+            throws IOException {
         ReportDataBuilder builder = new ReportDataBuilder();
-        ReportData reportData = builder.build(source);
+        ReportData reportData = builder.build(source, editorActivity);
         generate(reportData, target);
     }
 
-    // Writes PDF for the given report data.
+    public void exportQuietly(EventSource source, Path folder) {
+        exportQuietly(source, null, folder);
+    }
+
+    public void exportQuietly(EventSource source, Map<String, Object> editorActivity,
+            Path folder) {
+        try {
+            String fileName = reportFileName(source.metadata().getSessionId());
+            export(source, editorActivity, folder.resolve(fileName));
+        } catch (Throwable e) {
+            LOGGER.log(Level.WARNING, "Could not create the PDF report", e);
+        }
+    }
 
     public void generate(ReportData reportData, Path target) throws IOException {
-        Path parent = target.getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
+
+        if (target.getParent() != null) {
+            Files.createDirectories(target.getParent());
         }
+
         Document document = new Document(PageSize.A4);
         try {
             PdfWriter.getInstance(document, new FileOutputStream(target.toFile()));
@@ -86,7 +105,7 @@ public class PdfReportGenerator implements Exporter {
 
         addChart(document, new CompilePassFailPieChart(), reportData, "pie");
         addChart(document, new ErrorTypeBarChart(), reportData, "bar");
-        addChart(document, new ActivityStackedBarChart(), reportData, "stacked");
+        addChart(document, new EditorActivityBarChart(), reportData, "editor activity");
     }
 
     // Page 2
@@ -97,6 +116,9 @@ public class PdfReportGenerator implements Exporter {
 
         document.add(new Paragraph("Compile Summary", headingFont));
         addTextTable(document, new SummaryTableBuilder().build(reportData));
+
+        document.add(new Paragraph("\nEditor Activity", headingFont));
+        addTextTable(document, new EditorActivityTableBuilder().build(reportData));
 
         document.add(new Paragraph("\nMost Frequent Errors", headingFont));
         addTextTable(document, new TopErrorsTableBuilder().build(reportData));
@@ -111,14 +133,11 @@ public class PdfReportGenerator implements Exporter {
         String[] lines = tableText.split("\n");
 
         for (String line : lines) {
-            String[] cells = line.split("\\|", TABLE_COLUMNS);
-            if (cells.length != TABLE_COLUMNS) {
-                table.addCell(new Phrase(line));
-                table.addCell(new Phrase(""));
-                continue;
+            if (line.contains("|")) {
+                String[] cells = line.split("\\|", TABLE_COLUMNS);
+                table.addCell(new Phrase(cells[0]));
+                table.addCell(new Phrase(cells[1]));
             }
-            table.addCell(new Phrase(cells[0]));
-            table.addCell(new Phrase(cells[1]));
         }
         document.add(table);
     }
@@ -128,20 +147,24 @@ public class PdfReportGenerator implements Exporter {
             return "No activity was recorded in this session.";
         }
         String rateText = String.format("%.1f%%", reportData.getCompileSuccessRate() * PERCENT);
-        String activeText = TimeFormatter.TimeFormat(reportData.getActiveTimeMs());
-        String idleText = TimeFormatter.TimeFormat(reportData.getIdleTimeMs());
-        return "The student compiled " + reportData.getTotalCompiles() + " times and "
-                + reportData.getPassedCompiles() + " passed (" + rateText + "). Active time was "
-                + activeText + " and idle time was " + idleText + ".";
-    }
+        String text = "The student compiled " + reportData.getTotalCompiles() + " times and "
+                + reportData.getPassedCompiles() + " passed (" + rateText + ").";
 
-    // Error handling if chart doesn't appear log it and the pdf still generates
+        EditorActivity editor = reportData.getEditorActivity();
+        if (editor.isAvailable()) {
+            String typingText = TimeFormatter.TimeFormat(editor.getTypingMs());
+            String idleText = TimeFormatter.TimeFormat(editor.getIdleMs());
+            text = text + " Typing time was " + typingText + " and idle time was "
+                    + idleText + ".";
+        }
+        return text;
+    }
 
     private void addChart(Document document, ChartRenderer renderer, ReportData reportData,
             String name) throws DocumentException {
         Path imageFile = null;
         try {
-            imageFile = Files.createTempFile(name, ".png");
+            imageFile = Files.createTempFile("chart", ".png");
             renderer.render(reportData, imageFile);
 
             Image image = Image.getInstance(imageFile.toString());
