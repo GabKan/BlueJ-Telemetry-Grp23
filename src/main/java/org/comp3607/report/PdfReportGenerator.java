@@ -59,10 +59,6 @@ public class PdfReportGenerator implements Exporter {
         generate(reportData, target);
     }
 
-    public void exportQuietly(EventSource source, Path folder) {
-        exportQuietly(source, null, folder);
-    }
-
     public void exportQuietly(EventSource source, Map<String, Object> editorActivity,
             Path folder) {
         try {

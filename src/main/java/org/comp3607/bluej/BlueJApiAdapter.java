@@ -25,6 +25,7 @@ public class BlueJApiAdapter implements
     private final List<Map<String, Object>> errors = new ArrayList<>();
     private final List<String> knownClassNames = new ArrayList<>();
     private final List<String> compilingClassNames = new ArrayList<>();
+    private Path classBaselineDirectory;
     private File projectDirectory;
 
     public BlueJApiAdapter(
@@ -83,7 +84,11 @@ public class BlueJApiAdapter implements
         if (directory == null)
             return;
 
-        try (Stream<Path> files = Files.walk(directory.toPath())) {
+        Path baselineDirectory = directory.toPath().toAbsolutePath().normalize();
+        if (baselineDirectory.equals(classBaselineDirectory))
+            return;
+
+        try (Stream<Path> files = Files.walk(baselineDirectory)) {
             files.filter(Files::isRegularFile)
                 .map(Path::getFileName)
                 .map(Path::toString)
@@ -91,6 +96,7 @@ public class BlueJApiAdapter implements
                 .map(fileName -> fileName.substring(0, fileName.length() - 5))
                 .filter(className -> !knownClassNames.contains(className))
                 .forEach(knownClassNames::add);
+            classBaselineDirectory = baselineDirectory;
         } catch (IOException exception) {
             System.err.println(
                 "BlueJ Telemetry could not scan existing project classes: "
@@ -287,6 +293,7 @@ public class BlueJApiAdapter implements
 
             if (projectSettings.isFile()) {
                 projectDirectory = directory;
+                rememberExistingClasses(directory);
                 return;
             }
 

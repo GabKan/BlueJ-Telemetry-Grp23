@@ -31,14 +31,6 @@ public class TelemetryExtension extends Extension {
     static void generateReportsForSession(
         org.comp3607.api.EventSource source,
         java.nio.file.Path projectDirectory,
-        String sessionId
-    ) throws IOException {
-        generateReportsForSession(source, projectDirectory, sessionId, null);
-    }
-
-    static void generateReportsForSession(
-        org.comp3607.api.EventSource source,
-        java.nio.file.Path projectDirectory,
         String sessionId,
         Map<String, Object> editorActivity
     ) throws IOException {
@@ -48,7 +40,7 @@ public class TelemetryExtension extends Extension {
 
         Path jsonReport = projectDirectory.resolve("json_reports")
             .resolve(JsonReportGenerator.reportFileName(sessionId));
-        new JsonReportGenerator().export(source, jsonReport);
+        new JsonReportGenerator().export(source, editorActivity, jsonReport);
 
         new PdfReportGenerator().exportQuietly(
             source, editorActivity, projectDirectory.resolve("pdf_reports")

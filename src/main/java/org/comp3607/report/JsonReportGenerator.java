@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.comp3607.analytics.EditorActivity;
 import org.comp3607.analytics.ReportData;
 import org.comp3607.analytics.ReportDataBuilder;
 import org.comp3607.api.EventSource;
@@ -22,8 +23,16 @@ public class JsonReportGenerator implements Exporter {
 
     @Override
     public void export(EventSource source, Path target) throws IOException {
+        export(source, null, target);
+    }
+
+    public void export(
+        EventSource source,
+        Map<String, Object> editorActivity,
+        Path target
+    ) throws IOException {
         SessionMetadata metadata = source.metadata();
-        ReportData reportData = new ReportDataBuilder().build(source);
+        ReportData reportData = new ReportDataBuilder().build(source, editorActivity);
 
         Map<String, Object> session = new HashMap<>();
         session.put("sessionId", metadata.getSessionId());
@@ -44,6 +53,9 @@ public class JsonReportGenerator implements Exporter {
         summary.put("activeTimeMs", reportData.getActiveTimeMs());
         summary.put("idleTimeMs", reportData.getIdleTimeMs());
         summary.put("classTimeline", reportData.getClassTimeline());
+        summary.put("editorActivity", buildEditorActivitySummary(
+            reportData.getEditorActivity()
+        ));
 
         Map<String, Object> report = new HashMap<>();
         report.put("session", session);
@@ -55,5 +67,22 @@ public class JsonReportGenerator implements Exporter {
             Files.createDirectories(parent);
         }
         Files.writeString(target, json, StandardCharsets.UTF_8);
+    }
+
+    private Map<String, Object> buildEditorActivitySummary(EditorActivity editorActivity) {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("available", editorActivity.isAvailable());
+        summary.put("typingMs", editorActivity.getTypingMs());
+        summary.put("typingChars", editorActivity.getTypingChars());
+        summary.put("deletionMs", editorActivity.getDeletionMs());
+        summary.put("deletionChars", editorActivity.getDeletionChars());
+        summary.put("pasteMs", editorActivity.getPasteMs());
+        summary.put("pasteCount", editorActivity.getPasteCount());
+        summary.put("activeMs", editorActivity.getActiveMs());
+        summary.put("idleMs", editorActivity.getIdleMs());
+        summary.put("longestIdleMs", editorActivity.getLongestIdleMs());
+        summary.put("editCount", editorActivity.getEditCount());
+        summary.put("typingSpeedCharsPerMinute", editorActivity.getTypingSpeed());
+        return summary;
     }
 }

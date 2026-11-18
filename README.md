@@ -40,11 +40,12 @@ telemetry.
 
 The extension records one `EXECUTION` event after a method invocation, including
 the class name and whether it exited because of a runtime exception. It also
-records class deletions, renames, and inferred creation on a class's first
-successful compile in the current session. Compile events are used as a proxy
-for editing activity; exact keystrokes and typing cadence are not captured.
-Periods of at least one minute between observed activity callbacks are
-recorded as estimated idle time.
+records class deletions, renames, and inferred creations by comparing
+successful compiles with a source-file baseline. The baseline is scanned at
+startup when a project is already open, or when the project is first discovered
+at compile time. Compile events are used as a proxy for editing activity; exact
+keystrokes and typing cadence are not captured. Periods of at least one minute
+between observed activity callbacks are recorded as estimated idle time.
 
 ## Editor typing telemetry
 

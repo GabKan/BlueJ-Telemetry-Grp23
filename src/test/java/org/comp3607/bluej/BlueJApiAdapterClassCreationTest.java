@@ -19,9 +19,11 @@ class BlueJApiAdapterClassCreationTest {
 
     @Test
     void recordsCreationOnFirstSuccessfulCompileOnly() throws Exception {
-        Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
+        Files.createFile(project.resolve("package.bluej"));
         BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
         BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
+        adapter.rememberExistingClasses(project.toFile());
+        Path sourceFile = Files.createFile(project.resolve("Example.java"));
         BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
         BlueJCompileTestSupport.finishFailedCompilation(adapter, sourceFile);
         BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
@@ -38,11 +40,10 @@ class BlueJApiAdapterClassCreationTest {
     }
 
     @Test
-    void doesNotRecordExistingSourceAsCreatedAfterSessionStarts() throws Exception {
+    void baselinesExistingSourcesWhenProjectIsFirstFoundAtCompileTime() throws Exception {
         Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
         BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
         BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
-        adapter.rememberExistingClasses(project.toFile());
 
         BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
         BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, sourceFile);
