@@ -7,6 +7,9 @@ import org.comp3607.api.EventSource;
 import org.comp3607.model.EventType;
 import org.comp3607.model.TelemetryEvent;
 
+/**
+ * Builds the execution section.
+ */
 public class ExecutionJsonBuilder implements SectionBuilder {
 
     private static final double ROUND = 10000.0;
@@ -16,6 +19,9 @@ public class ExecutionJsonBuilder implements SectionBuilder {
         return "execution";
     }
 
+    /**
+     * Run count and the compile to run ratio.
+     */
     @Override
     public Map<String, Object> build(EventSource source) {
         int compiles = 0;
