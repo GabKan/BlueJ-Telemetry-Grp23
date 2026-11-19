@@ -8,14 +8,23 @@ import java.util.Map;
 
 import org.comp3607.api.EventSource;
 
+/**
+ * Puts the telemetry JSON document together from a session's events.
+ */
 public class TelemetryJsonSerialiser {
 
     private final List<SectionBuilder> sections = Arrays.asList(new SessionJsonBuilder(), new CompilationJsonBuilder(), new ExecutionJsonBuilder(), new CodeJsonBuilder(), new EventsJsonBuilder());
 
+    /**
+     * Serialises a session with no editor activity.
+     */
     public String serialise(EventSource source) {
         return serialise(source, null);
     }
 
+    /**
+     * Serialises a session into JSON text.
+     */
     public String serialise(EventSource source, Map<String, Object> editorActivity) {
         Map<String, Object> json = new LinkedHashMap<>();
         json.put("schema_version", "1.0");
@@ -37,12 +46,18 @@ public class TelemetryJsonSerialiser {
         return serialise(json);
     }
 
+    /**
+     * Turns the assembled map into formatted JSON text.
+     */
     public String serialise(Map<String, Object> json) {
         StringBuilder output = new StringBuilder();
         appendValue(output, json, 0);
         return output.toString();
     }
 
+    /**
+     * Writes one value. Throws if the type has no JSON form.
+     */
     private void appendValue(StringBuilder output, Object value, int indentation) {
         if (value == null) {
             output.append("null");
@@ -60,6 +75,9 @@ public class TelemetryJsonSerialiser {
         }
     }
 
+    /**
+     * Writes an object, one key per line.
+     */
     private void appendObject(StringBuilder output, Map<?, ?> values, int indentation) {
         output.append('{');
         if (!values.isEmpty()) {
@@ -81,6 +99,9 @@ public class TelemetryJsonSerialiser {
         output.append('}');
     }
 
+    /**
+     * Writes an array, one element per line.
+     */
     private void appendArray(StringBuilder output, List<?> values, int indentation) {
         output.append('[');
         if (!values.isEmpty()) {
@@ -98,6 +119,9 @@ public class TelemetryJsonSerialiser {
         output.append(']');
     }
 
+    /**
+     * Writes a quoted string, escaping control characters.
+     */
     private void appendString(StringBuilder output, String value) {
         output.append('"');
         for (int index = 0; index < value.length(); index++) {
@@ -125,6 +149,9 @@ public class TelemetryJsonSerialiser {
         output.append('"');
     }
 
+    /**
+     * One space per indent level.
+     */
     private void appendIndentation(StringBuilder output, int indentation) {
         for (int index = 0; index < indentation; index++) {
             output.append(" ");
