@@ -9,6 +9,9 @@ import org.comp3607.api.EventSource;
 import org.comp3607.model.EventType;
 import org.comp3607.model.TelemetryEvent;
 
+/**
+ * Builds the compilation section.
+ */
 public class CompilationJsonBuilder implements SectionBuilder {
 
     private static final double ROUND = 10000.0;
@@ -19,6 +22,9 @@ public class CompilationJsonBuilder implements SectionBuilder {
         return "compilation";
     }
 
+    /**
+     * Compile counts success rate and errors grouped by type.
+     */
     @Override
     public Map<String, Object> build(EventSource source) {
         int total = 0;
@@ -61,7 +67,10 @@ public class CompilationJsonBuilder implements SectionBuilder {
         compilation.put("errors_by_type", errorsByType);
         return compilation;
     }
-    
+
+    /**
+     * Uses the error's message if it has one, otherwise its string form.
+     */
     private String errorName(Object error) {
         if (error instanceof Map<?, ?>) {
             Object message = ((Map<?, ?>) error).get("message");
@@ -72,6 +81,9 @@ public class CompilationJsonBuilder implements SectionBuilder {
         return cleanName(String.valueOf(error));
     }
 
+    /**
+     * Cuts the name at the first line break, swaps pipes for slashes, and caps the length.
+     */
     private String cleanName(String name) {
         String cleaned = name;
         int lineBreak = cleaned.indexOf("\n");
