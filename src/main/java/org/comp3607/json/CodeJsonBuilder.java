@@ -1,7 +1,7 @@
 package org.comp3607.json;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +24,7 @@ public class CodeJsonBuilder implements SectionBuilder {
      */
     @Override
     public Map<String, Object> build(EventSource source) {
-        List<TelemetryEvent> events = source.getEvents();
+        List<TelemetryEvent> events = source.snapshot();
 
         int classesCreated = 0;
         int classesDeleted = 0;
@@ -52,7 +52,7 @@ public class CodeJsonBuilder implements SectionBuilder {
             }
         }
 
-        Map<String, Object> code = new LinkedHashMap<>();
+        Map<String, Object> code = new HashMap<>();
         code.put("classes_created", classesCreated);
         code.put("classes_deleted", classesDeleted);
         code.put("classes_modified", classesModified);
