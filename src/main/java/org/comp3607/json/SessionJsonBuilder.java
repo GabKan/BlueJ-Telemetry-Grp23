@@ -6,6 +6,9 @@ import java.util.Map;
 import org.comp3607.api.EventSource;
 import org.comp3607.model.SessionMetadata;
 
+/**
+ * Builds the session section.
+ */
 public class SessionJsonBuilder implements SectionBuilder {
 
     private static final double ROUND = 10000.0;
@@ -15,6 +18,9 @@ public class SessionJsonBuilder implements SectionBuilder {
         return "session";
     }
 
+    /**
+     * Session id, student id, start and end times, and duration in seconds.
+     */
     @Override
     public Map<String, Object> build(EventSource source) {
         SessionMetadata meta = source.metadata();
