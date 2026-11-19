@@ -21,13 +21,17 @@ public class TelemetryJsonSerialiser {
         json.put("schema_version", "1.0");
 
         for (SectionBuilder section : sections) {
+            Map<String, Object> sectionData = section.build(source);
             if ("events".equals(section.sectionName())) {
-                Map<String, Object> gui = new HashMap<>();
-                gui.put("editorActivity",
-                        editorActivity == null ? new HashMap<String, Object>() : editorActivity);
-                json.put("gui", gui);
+                if (editorActivity != null) {
+                    Map<String, Object> gui = new HashMap<>();
+                    gui.put("editorActivity", editorActivity);
+                    json.put("gui", gui);
+                }
+                json.put("events", sectionData.get("events"));
+            } else {
+                json.put(section.sectionName(), sectionData);
             }
-            json.put(section.sectionName(), section.build(source));
         }
 
         return serialise(json);

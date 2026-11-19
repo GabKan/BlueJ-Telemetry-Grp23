@@ -21,13 +21,31 @@ import org.comp3607.report.PdfReportGenerator;
 import bluej.extensions2.BlueJ;
 import bluej.extensions2.Extension;
 
+/**
+ * BlueJ extension entry point that collects session telemetry and exports
+ * telemetry data and reports when BlueJ closes the extension.
+ */
 public class TelemetryExtension extends Extension {
+    /** Wall-clock time, in milliseconds since the epoch, when this extension started. */
     private long sessionStartMs;
+    /** Identifier shared by the telemetry events and reports for this extension session. */
     private String sessionId;
+    /** In-memory event source populated by the registered telemetry listeners. */
     private BufferedEventSink eventSource;
+    /** Adapter that connects BlueJ callbacks to the telemetry listeners. */
     private BlueJApiAdapter adapter;
+    /** Tracker that samples editor activity and remembers the active project directory. */
     private BlueJEditorActivityTracker editorActivityTracker;
 
+    /**
+     * Writes the JSON and PDF reports for a completed telemetry session.
+     *
+     * @param source source of the session events and metadata
+     * @param projectDirectory directory in which report folders are created
+     * @param sessionId identifier used to name the JSON report
+     * @param editorActivity optional editor-activity data to include in the reports
+     * @throws IOException if writing the JSON report fails
+     */
     static void generateReportsForSession(
         org.comp3607.api.EventSource source,
         java.nio.file.Path projectDirectory,
@@ -47,7 +65,12 @@ public class TelemetryExtension extends Extension {
         );
     }
 
-    // BlueJ Extension API lifecycle hook.
+    /**
+     * Initializes session state, registers BlueJ event listeners, and starts
+     * editor-activity tracking.
+     *
+     * @param bluej BlueJ application instance that owns this extension
+     */
     @Override
     public void startup(BlueJ bluej) {
         sessionStartMs = System.currentTimeMillis();
@@ -87,7 +110,10 @@ public class TelemetryExtension extends Extension {
         System.out.println("BlueJ Telemetry extension started");
     }
 
-    // BlueJ Extension API lifecycle hook.
+    /**
+     * Stops tracking, updates session metadata, and saves the telemetry and
+     * generated reports to the observed BlueJ project directory.
+     */
     @Override
     public void terminate() {
         if (adapter != null)
@@ -163,25 +189,41 @@ public class TelemetryExtension extends Extension {
         System.out.println("BlueJ Telemetry extension stopped");
     }
 
-    // BlueJ Extension API compatibility hook.
+    /**
+     * Indicates whether this extension can run with the installed BlueJ API.
+     *
+     * @return {@code true} when the BlueJ extension API major version is at least 3
+     */
     @Override
     public boolean isCompatible() {
         return getExtensionsAPIVersionMajor() >= 3;
     }
 
-    // BlueJ Extension API metadata hook.
+    /**
+     * Returns the display name of this extension.
+     *
+     * @return extension name
+     */
     @Override
     public String getName() {
         return "BlueJ Telemetry";
     }
 
-    // BlueJ Extension API metadata hook.
+    /**
+     * Returns the version reported to BlueJ.
+     *
+     * @return extension version
+     */
     @Override
     public String getVersion() {
         return "1.0";
     }
 
-    // BlueJ Extension API metadata hook.
+    /**
+     * Returns the description shown by BlueJ for this extension.
+     *
+     * @return extension description
+     */
     @Override
     public String getDescription() {
         return "Records compilation and execution events for a BlueJ session.";

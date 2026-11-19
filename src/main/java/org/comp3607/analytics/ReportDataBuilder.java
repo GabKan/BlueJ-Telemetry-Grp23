@@ -6,14 +6,31 @@ import java.util.Map;
 import org.comp3607.api.EventSource;
 import org.comp3607.model.TelemetryEvent;
 
-//  Runs every aggregator and puts the answers into one ReportData object
-
+/**
+ * Coordinates the analytics aggregators and combines their results into one
+ * {@link ReportData} instance for report generation.
+ */
 public class ReportDataBuilder {
 
+    /**
+     * Builds report data from the events and metadata exposed by an event
+     * source, without editor-activity details.
+     *
+     * @param source source of session events and metadata
+     * @return aggregated report data
+     */
     public ReportData build(EventSource source) {
         return build(source, null);
     }
 
+    /**
+     * Builds report data by aggregating compile results, errors, executions,
+     * active and idle time, class history, and optional editor activity.
+     *
+     * @param source source of session events and metadata
+     * @param editorActivity optional editor-activity data to include
+     * @return aggregated report data for the source session
+     */
     public ReportData build(EventSource source, Map<String, Object> editorActivity) {
         List<TelemetryEvent> events = source.snapshot();
         String sessionId = source.metadata().getSessionId();

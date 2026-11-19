@@ -14,20 +14,46 @@ import bluej.extensions2.*;
 import bluej.extensions2.event.*;
 import bluej.extensions2.event.InvocationFinishedEvent.EventType;
 
+/**
+ * Bridges BlueJ compile, invocation, and class events to the telemetry
+ * listeners, while tracking the current project and its known classes.
+ */
 public class BlueJApiAdapter implements
     CompileListener, InvocationFinishedListener, ClassListener {
+    /** BlueJ application used to register listeners and resolve project information. */
     private final BlueJ bluej;
+    /** Listener that converts compile callbacks into telemetry events. */
     private final CompileEventListener compileListener;
+    /** Listener that converts completed invocations into telemetry events. */
     private final ExecutionEventListener executionListener;
+    /** Listener that records class creation, removal, and rename events. */
     private final ClassEventListener classListener;
+    /** Listener that records activity associated with compile and class callbacks. */
     private final InteractionEventListener interactionListener;
+    /** Session start time used to calculate offsets for emitted events. */
     private final long sessionStartMs;
+    /** Compile errors collected between compile start and completion callbacks. */
     private final List<Map<String, Object>> errors = new ArrayList<>();
+    /** Class names known to exist in the active project. */
     private final List<String> knownClassNames = new ArrayList<>();
+    /** Class names included in the compile currently in progress. */
     private final List<String> compilingClassNames = new ArrayList<>();
+    /** Normalized directory whose Java files were last used to seed the class baseline. */
     private Path classBaselineDirectory;
+    /** Most recently identified BlueJ project directory. */
     private File projectDirectory;
 
+    /**
+     * Creates an adapter that forwards BlueJ events to the supplied telemetry
+     * listeners.
+     *
+     * @param bluej BlueJ application instance
+     * @param compileListener destination for compilation events
+     * @param executionListener destination for execution events
+     * @param classListener destination for class lifecycle events
+     * @param interactionListener destination for interaction activity
+     * @param sessionStartMs session start time in milliseconds since the epoch
+     */
     public BlueJApiAdapter(
         BlueJ bluej,
         CompileEventListener compileListener,
@@ -44,19 +70,28 @@ public class BlueJApiAdapter implements
         this.sessionStartMs = sessionStartMs;
     }
 
+    /**
+     * Registers this adapter for compile, invocation, and class events from BlueJ.
+     */
     public void registerEventListeners() {
         bluej.addCompileListener(this);
         bluej.addInvocationFinishedListener(this);
         bluej.addClassListener(this);
     }
 
+    /**
+     * Removes this adapter from the BlueJ event listener registrations.
+     */
     public void unregisterEventListeners() {
         bluej.removeCompileListener(this);
         bluej.removeInvocationFinishedListener(this);
         bluej.removeClassListener(this);
     }
 
-    /** Records the project that is currently open when the extension starts. */
+    /**
+     * Records the currently open project directory and seeds the known-class
+     * baseline from its Java source files.
+     */
     public void rememberOpenProjectDirectory() {
         if (bluej == null)
             return;
@@ -80,6 +115,13 @@ public class BlueJApiAdapter implements
         }
     }
 
+    /**
+     * Adds Java source-file names under the supplied directory to the known
+     * class baseline. A new baseline is scanned only when the normalized
+     * directory differs from the previously scanned one.
+     *
+     * @param directory project directory to scan; {@code null} is ignored
+     */
     void rememberExistingClasses(File directory) {
         if (directory == null)
             return;
@@ -110,7 +152,12 @@ public class BlueJApiAdapter implements
         }
     }
 
-    // BlueJ invocation callback, called after a method or object interaction finishes.
+    /**
+     * Handles a completed BlueJ invocation by recording execution and
+     * corresponding interaction activity.
+     *
+     * @param event BlueJ event describing the completed invocation
+     */
     @Override
     public void invocationFinished(InvocationFinishedEvent event) {
         rememberExecutionProjectDirectory(event);
@@ -129,6 +176,12 @@ public class BlueJApiAdapter implements
         );
     }
 
+    /**
+     * Handles removal of a class from the project and removes it from the
+     * known-class baseline.
+     *
+     * @param event BlueJ event describing the removed class
+     */
     @Override
     public void classRemoved(ClassEvent event) {
         rememberClassProjectDirectory(event);
@@ -145,11 +198,23 @@ public class BlueJApiAdapter implements
         );
     }
 
+    /**
+     * Receives class compilation-state changes. These callbacks are not treated
+     * as source edits, so this implementation intentionally records no event.
+     *
+     * @param event BlueJ event describing the class state change
+     */
     @Override
     public void classStateChanged(ClassEvent event) {
         // This callback reports compilation state, not source modifications.
     }
 
+    /**
+     * Handles a class rename, updating the known-class baseline and emitting
+     * class and interaction events.
+     *
+     * @param event BlueJ event describing the renamed class
+     */
     @Override
     public void classNameChanged(ClassEvent event) {
         rememberClassProjectDirectory(event);
@@ -170,6 +235,12 @@ public class BlueJApiAdapter implements
         );
     }
 
+    /**
+     * Updates the remembered project directory from a class event when its
+     * package and project are available.
+     *
+     * @param event class event from which to resolve the project directory
+     */
     private void rememberClassProjectDirectory(ClassEvent event) {
         if (bluej == null)
             return;
@@ -187,6 +258,12 @@ public class BlueJApiAdapter implements
         }
     }
 
+    /**
+     * Updates the remembered project directory from a completed invocation
+     * when its package and project are available.
+     *
+     * @param event invocation event from which to resolve the project directory
+     */
     private void rememberExecutionProjectDirectory(InvocationFinishedEvent event) {
         if (bluej == null)
             return;
@@ -204,7 +281,12 @@ public class BlueJApiAdapter implements
         }
     }
 
-    // BlueJ CompileListener callback.
+    /**
+     * Starts bookkeeping for a BlueJ compilation, recording its source class
+     * names and start activity.
+     *
+     * @param event BlueJ event containing the files being compiled
+     */
     @Override
     public void compileStarted(CompileEvent event) {
         errors.clear();
@@ -233,7 +315,11 @@ public class BlueJApiAdapter implements
         );
     }
 
-    // BlueJ CompileListener callback.
+    /**
+     * Adds a compiler error to the collection for the active compilation.
+     *
+     * @param event BlueJ event containing the compiler message and line number
+     */
     @Override
     public void compileError(CompileEvent event) {
         Map<String, Object> error = new HashMap<>();
@@ -243,27 +329,53 @@ public class BlueJApiAdapter implements
         errors.add(error);
     }
 
-    // BlueJ CompileListener callback.
+    /**
+     * Receives compiler warnings. Warnings are currently not included in
+     * telemetry.
+     *
+     * @param event BlueJ warning event
+     */
     @Override
     public void compileWarning(CompileEvent event) {
     }
 
-    // BlueJ CompileListener callback.
+    /**
+     * Completes compile bookkeeping after BlueJ reports a successful compile.
+     *
+     * @param event BlueJ completion event
+     */
     @Override
     public void compileSucceeded(CompileEvent event) {
         recordCompileFinish(true);
     }
 
-    // BlueJ CompileListener callback.
+    /**
+     * Completes compile bookkeeping after BlueJ reports a failed compile.
+     *
+     * @param event BlueJ completion event
+     */
     @Override
     public void compileFailed(CompileEvent event) {
         recordCompileFinish(false);
     }
 
+    /**
+     * Forwards a compile-start event with both its wall-clock time and offset
+     * from the session start.
+     *
+     * @param className name of the class being compiled
+     * @param timestampMs event time in milliseconds since the epoch
+     */
     private void recordCompileStart(String className, long timestampMs) {
         compileListener.onCompileStarted(className, timestampMs, timestampMs - sessionStartMs);
     }
 
+    /**
+     * Emits the compile result and interaction activity, and adds newly
+     * compiled classes to the baseline when compilation succeeds.
+     *
+     * @param success {@code true} if the compilation succeeded
+     */
     private void recordCompileFinish(boolean success) {
         long timestampMs = System.currentTimeMillis();
         compileListener.onCompileFinished(
@@ -283,6 +395,13 @@ public class BlueJApiAdapter implements
         compilingClassNames.clear();
     }
 
+    /**
+     * Finds the BlueJ project root containing the supplied source files by
+     * searching upward for a {@code package.bluej} marker.
+     *
+     * @param files source files associated with the compile; {@code null} or
+     *              an empty array is ignored
+     */
     private void rememberProjectDirectory(File[] files) {
         if (files == null || files.length == 0)
             return;
@@ -301,10 +420,22 @@ public class BlueJApiAdapter implements
         }
     }
 
+    /**
+     * Returns the most recently identified project directory.
+     *
+     * @return project directory, or {@code null} if none has been identified
+     */
     public File getProjectDirectory() {
         return projectDirectory;
     }
 
+    /**
+     * Extracts the source file's base name without its final extension.
+     *
+     * @param file source file whose class name is required
+     * @return file name without its final extension, or the full name if it
+     *         has no extension
+     */
     private String getClassName(File file) {
         String fileName = file.getName();
         int extensionPosition = fileName.lastIndexOf('.');

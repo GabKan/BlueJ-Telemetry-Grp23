@@ -15,17 +15,48 @@ import org.comp3607.api.Exporter;
 import org.comp3607.json.TelemetryJsonSerialiser;
 import org.comp3607.model.SessionMetadata;
 
+/**
+ * Builds a calculated session summary and writes it as a JSON report.
+ */
 public class JsonReportGenerator implements Exporter {
 
+    /**
+     * Creates a JSON report generator.
+     */
+    public JsonReportGenerator() {
+    }
+
+    /**
+     * Builds the standard JSON report filename for a session.
+     *
+     * @param sessionId session identifier
+     * @return filename in the form {@code report_<sessionId>.json}
+     */
     public static String reportFileName(String sessionId) {
         return "report_" + sessionId + ".json";
     }
 
+    /**
+     * Exports a JSON summary without editor-activity data.
+     *
+     * @param source source of events and session metadata
+     * @param target destination file
+     * @throws IOException if the report cannot be written
+     */
     @Override
     public void export(EventSource source, Path target) throws IOException {
         export(source, null, target);
     }
 
+    /**
+     * Builds and writes a JSON summary of the session, including optional
+     * editor-activity totals.
+     *
+     * @param source source of events and session metadata
+     * @param editorActivity optional editor-activity data
+     * @param target destination file
+     * @throws IOException if the report cannot be written
+     */
     public void export(
         EventSource source,
         Map<String, Object> editorActivity,

@@ -21,6 +21,11 @@ import bluej.extensions2.PackageNotFoundException;
 import bluej.extensions2.ProjectNotOpenException;
 import bluej.extensions2.editor.JavaEditor;
 
+/**
+ * Samples visible BlueJ Java editors and summarizes text-length changes as
+ * typing, paste, deletion, and idle activity. It records lengths and timing,
+ * not source text or keystrokes.
+ */
 public class BlueJEditorActivityTracker {
 
     private static final long SAMPLE_MS = 250;
@@ -44,6 +49,11 @@ public class BlueJEditorActivityTracker {
     private boolean segmentsTruncated;
     private boolean stopped;
 
+    /**
+     * Creates a tracker for the supplied BlueJ application.
+     *
+     * @param bluej BlueJ application whose open projects and editors are sampled
+     */
     public BlueJEditorActivityTracker(BlueJ bluej) {
         this.bluej = bluej;
         counts.put("typing", 0L);
@@ -54,6 +64,9 @@ public class BlueJEditorActivityTracker {
         characters.putAll(counts);
     }
 
+    /**
+     * Starts periodic sampling of visible Java editors.
+     */
     public void start() {
         timer.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -63,6 +76,10 @@ public class BlueJEditorActivityTracker {
         }, 0, SAMPLE_MS, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Stops sampling and closes any activity segments that are still open.
+     * Repeated calls after the first have no effect.
+     */
     public synchronized void stop() {
         if (stopped) {
             return;
@@ -72,10 +89,20 @@ public class BlueJEditorActivityTracker {
         closeAllSegments();
     }
 
+    /**
+     * Returns the most recently observed BlueJ project directory.
+     *
+     * @return project directory, or {@code null} if none has been observed
+     */
     public synchronized File getProjectDirectory() {
         return projectDirectory;
     }
 
+    /**
+     * Returns a snapshot of the editor-activity segments and aggregate totals.
+     *
+     * @return map containing sampling metadata, segments, and summary totals
+     */
     public synchronized Map<String, Object> getEditorActivity() {
         Map<String, Object> activity = new HashMap<>();
         activity.put("pollIntervalMs", SAMPLE_MS);

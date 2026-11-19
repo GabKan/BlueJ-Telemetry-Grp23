@@ -27,9 +27,9 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 
-
-//  Single entry point for the PDF report: calculates the data, draws the charts and tables
-
+/**
+ * Builds the session's report data and renders it as a two-page PDF.
+ */
 public class PdfReportGenerator implements Exporter {
 
     private static final Logger LOGGER = Logger.getLogger(PdfReportGenerator.class.getName());
@@ -44,14 +44,41 @@ public class PdfReportGenerator implements Exporter {
     private static final float TABLE_GAP = 6;
     private static final double PERCENT = 100.0;
 
+    /**
+     * Creates a PDF report generator.
+     */
+    public PdfReportGenerator() {
+    }
+
+    /**
+     * Builds the standard PDF report filename for a session.
+     *
+     * @param sessionId session identifier
+     * @return filename in the form {@code report_<sessionId>.pdf}
+     */
     public static String reportFileName(String sessionId) {
         return "report_" + sessionId + ".pdf";
     }
 
+    /**
+     * Exports a PDF report without editor-activity data.
+     *
+     * @param source source of events and session metadata
+     * @param target destination file
+     * @throws IOException if the report cannot be written
+     */
     public void export(EventSource source, Path target) throws IOException {
         export(source, null, target);
     }
 
+    /**
+     * Builds report data from the event source and renders it to a PDF file.
+     *
+     * @param source source of events and session metadata
+     * @param editorActivity optional editor-activity data
+     * @param target destination file
+     * @throws IOException if the report cannot be written
+     */
     public void export(EventSource source, Map<String, Object> editorActivity, Path target)
             throws IOException {
         ReportDataBuilder builder = new ReportDataBuilder();
@@ -59,6 +86,14 @@ public class PdfReportGenerator implements Exporter {
         generate(reportData, target);
     }
 
+    /**
+     * Attempts to export a PDF report and logs a warning rather than
+     * propagating a failure.
+     *
+     * @param source source of events and session metadata
+     * @param editorActivity optional editor-activity data
+     * @param folder directory in which the named report is written
+     */
     public void exportQuietly(EventSource source, Map<String, Object> editorActivity,
             Path folder) {
         try {
@@ -69,6 +104,13 @@ public class PdfReportGenerator implements Exporter {
         }
     }
 
+    /**
+     * Renders precomputed report data to a PDF file.
+     *
+     * @param reportData data displayed in the report
+     * @param target destination file
+     * @throws IOException if the PDF cannot be written or rendered
+     */
     public void generate(ReportData reportData, Path target) throws IOException {
 
         if (target.getParent() != null) {
