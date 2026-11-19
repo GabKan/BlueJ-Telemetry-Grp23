@@ -38,6 +38,8 @@ public class BlueJApiAdapter implements
     private final List<String> knownClassNames = new ArrayList<>();
     /** Class names included in the compile currently in progress. */
     private final List<String> compilingClassNames = new ArrayList<>();
+    /** Whether a BlueJ compile-start callback is awaiting a completion callback. */
+    private boolean compileInProgress;
     /** Normalized directory whose Java files were last used to seed the class baseline. */
     private Path classBaselineDirectory;
     /** Most recently identified BlueJ project directory. */
@@ -106,13 +108,27 @@ public class BlueJApiAdapter implements
                     projectDirectory = projects[0].getDir();
                 }
             }
-            rememberExistingClasses(projectDirectory);
+            rememberProjectDirectory(projectDirectory);
         } catch (ProjectNotOpenException exception) {
             System.err.println(
                 "BlueJ Telemetry could not find the open project directory: "
                     + exception.getMessage()
             );
         }
+    }
+
+    /**
+     * Remembers a project directory and snapshots its existing Java source
+     * files before later compile callbacks can identify newly added classes.
+     *
+     * @param directory project directory to remember; {@code null} is ignored
+     */
+    public void rememberProjectDirectory(File directory) {
+        if (directory == null)
+            return;
+
+        projectDirectory = directory;
+        rememberExistingClasses(directory);
     }
 
     /**
@@ -248,7 +264,7 @@ public class BlueJApiAdapter implements
         try {
             BPackage classPackage = event.getPackage();
             if (classPackage != null) {
-                projectDirectory = classPackage.getProject().getDir();
+                rememberProjectDirectory(classPackage.getProject().getDir());
             }
         } catch (ProjectNotOpenException exception) {
             System.err.println(
@@ -271,7 +287,7 @@ public class BlueJApiAdapter implements
         try {
             BPackage invocationPackage = event.getPackage();
             if (invocationPackage != null) {
-                projectDirectory = invocationPackage.getProject().getDir();
+                rememberProjectDirectory(invocationPackage.getProject().getDir());
             }
         } catch (ProjectNotOpenException exception) {
             System.err.println(
@@ -291,6 +307,7 @@ public class BlueJApiAdapter implements
     public void compileStarted(CompileEvent event) {
         errors.clear();
         compilingClassNames.clear();
+        compileInProgress = true;
         long timestampMs = System.currentTimeMillis();
         File[] files = event.getFiles();
         rememberProjectDirectory(files);
@@ -377,6 +394,10 @@ public class BlueJApiAdapter implements
      * @param success {@code true} if the compilation succeeded
      */
     private void recordCompileFinish(boolean success) {
+        if (!compileInProgress)
+            return;
+
+        compileInProgress = false;
         long timestampMs = System.currentTimeMillis();
         compileListener.onCompileFinished(
             success, errors, timestampMs, timestampMs - sessionStartMs
@@ -411,8 +432,7 @@ public class BlueJApiAdapter implements
             File projectSettings = new File(directory, "package.bluej");
 
             if (projectSettings.isFile()) {
-                projectDirectory = directory;
-                rememberExistingClasses(directory);
+                rememberProjectDirectory(directory);
                 return;
             }
 

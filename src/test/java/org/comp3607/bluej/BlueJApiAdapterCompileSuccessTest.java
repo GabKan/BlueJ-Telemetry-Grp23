@@ -29,4 +29,20 @@ class BlueJApiAdapterCompileSuccessTest {
             .anyMatch(event -> event.getType() == EventType.COMPILE_FINISH
                 && Boolean.TRUE.equals(event.getData().get("success"))));
     }
+
+    @Test
+    void countsOnlyCompileCompletionsThatFollowACompileStart() throws Exception {
+        Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
+        BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
+        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
+
+        BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, sourceFile);
+
+        assertEquals(1, source.snapshot().stream()
+            .filter(event -> event.getType() == EventType.COMPILE_FINISH)
+            .count());
+    }
 }

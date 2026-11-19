@@ -12,6 +12,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 import bluej.extensions2.BClass;
 import bluej.extensions2.BPackage;
@@ -35,6 +36,7 @@ public class BlueJEditorActivityTracker {
     private static final int MAX_SEGMENTS = 5000;
 
     private final BlueJ bluej;
+    private final Consumer<File> projectDirectoryObserver;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
     private final Map<String, Sample> previousSamples = new HashMap<>();
     private final Map<String, Segment> openSegments = new HashMap<>();
@@ -43,6 +45,7 @@ public class BlueJEditorActivityTracker {
     private final Map<String, Long> durations = new HashMap<>();
     private final Map<String, Long> characters = new HashMap<>();
     private volatile File projectDirectory;
+    private File lastReportedProjectDirectory;
     private long observedMs;
     private long longestIdleMs;
     private long editCount;
@@ -55,7 +58,21 @@ public class BlueJEditorActivityTracker {
      * @param bluej BlueJ application whose open projects and editors are sampled
      */
     public BlueJEditorActivityTracker(BlueJ bluej) {
+        this(bluej, null);
+    }
+
+    /**
+     * Creates a tracker that reports newly observed project directories.
+     *
+     * @param bluej BlueJ application whose open projects and editors are sampled
+     * @param projectDirectoryObserver callback for an observed project directory
+     */
+    public BlueJEditorActivityTracker(
+        BlueJ bluej,
+        Consumer<File> projectDirectoryObserver
+    ) {
         this.bluej = bluej;
+        this.projectDirectoryObserver = projectDirectoryObserver;
         counts.put("typing", 0L);
         counts.put("paste", 0L);
         counts.put("deletion", 0L);
@@ -133,12 +150,22 @@ public class BlueJEditorActivityTracker {
             if (samples == null) {
                 return;
             }
+            reportProjectDirectory();
             updateSamples(samples);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
         } catch (Exception exception) {
             System.err.println("BlueJ Telemetry could not sample editors: "
                 + exception.getMessage());
+        }
+    }
+
+    private void reportProjectDirectory() {
+        File observedDirectory = projectDirectory;
+        if (projectDirectoryObserver != null && observedDirectory != null
+                && !observedDirectory.equals(lastReportedProjectDirectory)) {
+            projectDirectoryObserver.accept(observedDirectory);
+            lastReportedProjectDirectory = observedDirectory;
         }
     }
 

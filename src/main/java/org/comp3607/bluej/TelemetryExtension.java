@@ -104,7 +104,9 @@ public class TelemetryExtension extends Extension {
         adapter.rememberOpenProjectDirectory();
         adapter.registerEventListeners();
 
-        editorActivityTracker = new BlueJEditorActivityTracker(bluej);
+        editorActivityTracker = new BlueJEditorActivityTracker(
+            bluej, adapter::rememberProjectDirectory
+        );
         editorActivityTracker.start();
 
         System.out.println("BlueJ Telemetry extension started");
