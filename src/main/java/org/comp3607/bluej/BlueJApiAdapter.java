@@ -307,7 +307,10 @@ public class BlueJApiAdapter implements
     public void compileStarted(CompileEvent event) {
         errors.clear();
         compilingClassNames.clear();
-        compileInProgress = true;
+        compileInProgress = event.isUserGeneratedCompilation();
+        if (!compileInProgress)
+            return;
+
         long timestampMs = System.currentTimeMillis();
         File[] files = event.getFiles();
         rememberProjectDirectory(files);
@@ -339,6 +342,9 @@ public class BlueJApiAdapter implements
      */
     @Override
     public void compileError(CompileEvent event) {
+        if (!compileInProgress)
+            return;
+
         Map<String, Object> error = new HashMap<>();
         error.put("errorCode", null);
         error.put("message", event.getErrorMessage());

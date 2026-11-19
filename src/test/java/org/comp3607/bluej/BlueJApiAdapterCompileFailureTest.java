@@ -38,4 +38,47 @@ class BlueJApiAdapterCompileFailureTest {
             BlueJApiAdapterTestSupport.COMPILE_ERROR_MESSAGE, diagnostic.get("message")
         );
     }
+
+    @Test
+    void ignoresBlueJGeneratedCompileErrorsAndResults() throws Exception {
+        Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
+        BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
+        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
+
+        BlueJCompileTestSupport.startBlueJGeneratedCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.recordBlueJGeneratedCompileError(adapter, sourceFile);
+        BlueJCompileTestSupport.finishBlueJGeneratedFailedCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.finishSuccessfulCompilation(adapter, sourceFile);
+
+        List<TelemetryEvent> compileEvents = source.snapshot().stream()
+            .filter(event -> event.getType() == EventType.COMPILE_START
+                || event.getType() == EventType.COMPILE_FINISH)
+            .toList();
+        assertEquals(2, compileEvents.size());
+        TelemetryEvent finishEvent = compileEvents.stream()
+            .filter(event -> event.getType() == EventType.COMPILE_FINISH)
+            .findFirst()
+            .orElseThrow();
+        assertTrue(((List<?>) finishEvent.getData().get("errors")).isEmpty());
+    }
+
+    @Test
+    void keepsErrorsForUserCompileWhenLaterCallbackFlagsDiffer() throws Exception {
+        Path sourceFile = BlueJApiAdapterTestSupport.sourceFile(project);
+        BufferedEventSink source = BlueJApiAdapterTestSupport.eventSource();
+        BlueJApiAdapter adapter = BlueJApiAdapterTestSupport.adapter(source);
+
+        BlueJCompileTestSupport.startCompilation(adapter, sourceFile);
+        BlueJCompileTestSupport.recordBlueJGeneratedCompileError(adapter, sourceFile);
+        BlueJCompileTestSupport.finishBlueJGeneratedFailedCompilation(adapter, sourceFile);
+
+        TelemetryEvent finishEvent = source.snapshot().stream()
+            .filter(event -> event.getType() == EventType.COMPILE_FINISH)
+            .findFirst()
+            .orElseThrow();
+        List<?> errors = assertInstanceOf(List.class, finishEvent.getData().get("errors"));
+        assertEquals(Boolean.FALSE, finishEvent.getData().get("success"));
+        assertEquals(1, errors.size());
+    }
 }
