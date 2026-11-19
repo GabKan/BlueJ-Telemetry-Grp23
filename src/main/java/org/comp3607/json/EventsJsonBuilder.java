@@ -7,6 +7,9 @@ import java.util.Map;
 import org.comp3607.api.EventSource;
 import org.comp3607.model.TelemetryEvent;
 
+/**
+ * Builds the events section.
+ */
 public class EventsJsonBuilder implements SectionBuilder {
 
     @Override
@@ -14,6 +17,9 @@ public class EventsJsonBuilder implements SectionBuilder {
         return "events";
     }
 
+    /**
+     * Turns every event into a map. The serialiser unwraps the events key.
+     */
     @Override
     public Map<String, Object> build(EventSource source) {
         List<Map<String, Object>> events = new ArrayList<>();
